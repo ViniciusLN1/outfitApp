@@ -5,7 +5,27 @@ import 'clothing_controller.dart';
 
 part 'constructor_controller.g.dart';
 
-enum ClothingCategory { camisa, calca, sapato, cinto, complemento }
+enum ClothingCategory {
+  chapeu,
+  camisa,
+  blusa,
+  cinto,
+  calca,
+  sapato,
+  complemento,
+}
+
+extension ClothingCategoryLabel on ClothingCategory {
+  String get displayName => switch (this) {
+        ClothingCategory.chapeu => 'Chapéu/Boné',
+        ClothingCategory.camisa => 'Camisa',
+        ClothingCategory.blusa => 'Blusa/Jaqueta',
+        ClothingCategory.cinto => 'Cinto',
+        ClothingCategory.calca => 'Calça',
+        ClothingCategory.sapato => 'Sapato',
+        ClothingCategory.complemento => 'Complemento',
+      };
+}
 
 typedef CanvasState = Map<ClothingCategory, ClothingItem?>;
 
@@ -13,10 +33,12 @@ typedef CanvasState = Map<ClothingCategory, ClothingItem?>;
 class ConstructorController extends _$ConstructorController {
   @override
   CanvasState build() => {
+        ClothingCategory.chapeu: null,
         ClothingCategory.camisa: null,
+        ClothingCategory.blusa: null,
+        ClothingCategory.cinto: null,
         ClothingCategory.calca: null,
         ClothingCategory.sapato: null,
-        ClothingCategory.cinto: null,
         ClothingCategory.complemento: null,
       };
 
@@ -32,8 +54,6 @@ class ConstructorController extends _$ConstructorController {
     state = build();
   }
 
-  /// Popula o canvas com as peças de um outfit existente para edição.
-  /// Deve ser chamado antes de navegar para a aba do Construtor.
   Future<void> loadOutfit(String outfitId) async {
     final db = ref.read(appDatabaseProvider);
     final outfitItems = await db.outfitDao.getItemsForOutfit(outfitId);

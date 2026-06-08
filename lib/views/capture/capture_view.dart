@@ -3,11 +3,14 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
 import '../../services/background_removal_service.dart';
 import '../../services/image_storage_service.dart';
+
+enum _UiState { sourceSelection, camera }
 
 class CaptureView extends ConsumerStatefulWidget {
   const CaptureView({super.key});
@@ -17,28 +20,13 @@ class CaptureView extends ConsumerStatefulWidget {
 }
 
 class _CaptureViewState extends ConsumerState<CaptureView> {
+  _UiState _uiState = _UiState.sourceSelection;
   CameraController? _cameraController;
   bool _isProcessing = false;
-  Uint8List? _processedPng;
+  Uint8List? _finalImage;
 
   final _nameController = TextEditingController();
   String _selectedCategory = ClothingCategory.camisa.name;
-
-  @override
-  void initState() {
-    super.initState();
-    _initCamera();
-  }
-
-  Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) return;
-    final controller =
-        CameraController(cameras.first, ResolutionPreset.high);
-    await controller.initialize();
-    if (!mounted) return;
-    setState(() => _cameraController = controller);
-  }
 
   @override
   void dispose() {
@@ -47,27 +35,91 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
     super.dispose();
   }
 
-  Future<void> _captureAndProcess() async {
-    if (_cameraController == null) return;
+  Future<void> _initCamera() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty || !mounted) return;
+    final controller = CameraController(cameras.first, ResolutionPreset.high);
+    await controller.initialize();
+    if (!mounted) return;
+    setState(() => _cameraController = controller);
+  }
+
+  Future<void> _selectCamera() async {
+    setState(() => _uiState = _UiState.camera);
+    await _initCamera();
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
+    if (picked == null || !mounted) return;
+    final bytes = await picked.readAsBytes();
+    await _handleBgChoice(bytes);
+  }
+
+  Future<void> _capturePhoto() async {
+    if (_cameraController == null || _isProcessing) return;
     setState(() => _isProcessing = true);
     try {
       final file = await _cameraController!.takePicture();
       final bytes = await file.readAsBytes();
-      final png = await BackgroundRemovalService().removeBackground(bytes);
-      setState(() => _processedPng = png);
+      setState(() => _isProcessing = false);
+      await _handleBgChoice(bytes);
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao capturar: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleBgChoice(Uint8List rawBytes) async {
+    if (!mounted) return;
+    final remove = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover fundo?'),
+        content: const Text('Deseja remover o fundo desta imagem?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Não'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sim'),
+          ),
+        ],
+      ),
+    );
+    if (remove == null || !mounted) return;
+    if (!remove) {
+      setState(() => _finalImage = rawBytes);
+      return;
+    }
+    setState(() => _isProcessing = true);
+    try {
+      final result = await BackgroundRemovalService().removeBackground(rawBytes);
+      if (mounted) setState(() => _finalImage = result);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao processar: $e')),
+          SnackBar(content: Text('Falha na remoção de fundo. Usando imagem original.')),
         );
+        setState(() => _finalImage = rawBytes);
       }
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _saveItem() async {
-    final png = _processedPng;
+    final png = _finalImage;
     if (png == null) return;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
@@ -86,7 +138,10 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
           );
       if (mounted) {
         setState(() {
-          _processedPng = null;
+          _finalImage = null;
+          _uiState = _UiState.sourceSelection;
+          _cameraController?.dispose();
+          _cameraController = null;
           _nameController.clear();
           _selectedCategory = ClothingCategory.camisa.name;
         });
@@ -95,23 +150,82 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
         );
       }
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
+  }
+
+  void _reset() {
+    _cameraController?.dispose();
+    setState(() {
+      _cameraController = null;
+      _uiState = _UiState.sourceSelection;
+      _finalImage = null;
+      _nameController.clear();
+      _selectedCategory = ClothingCategory.camisa.name;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_processedPng != null) {
-      return _buildPreviewForm();
+    if (_isProcessing && _finalImage == null && _uiState == _UiState.sourceSelection) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
-    return _buildCameraView();
+    if (_finalImage != null) return _buildPreviewForm();
+    if (_uiState == _UiState.camera) return _buildCameraView();
+    return _buildSourceSelection();
+  }
+
+  Widget _buildSourceSelection() {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Capturar Peça')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_photo_alternate_outlined, size: 72, color: Colors.grey),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Câmera'),
+                  onPressed: _selectCamera,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Galeria'),
+                  onPressed: _pickFromGallery,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCameraView() {
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Câmera'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _reset,
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
@@ -122,15 +236,28 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
           if (_isProcessing)
             const ColoredBox(
               color: Color(0x80000000),
-              child: Center(child: CircularProgressIndicator(color: Colors.white)),
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
             ),
+          Positioned(
+            top: 48,
+            left: 16,
+            child: SafeArea(
+              child: IconButton(
+                style: IconButton.styleFrom(backgroundColor: Colors.black38),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: _reset,
+              ),
+            ),
+          ),
           Positioned(
             bottom: 48,
             left: 0,
             right: 0,
             child: Center(
               child: FloatingActionButton.large(
-                onPressed: _isProcessing ? null : _captureAndProcess,
+                onPressed: _isProcessing ? null : _capturePhoto,
                 child: const Icon(Icons.camera_alt),
               ),
             ),
@@ -146,14 +273,14 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
         title: const Text('Salvar Peça'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => setState(() => _processedPng = null),
+          onPressed: _reset,
         ),
       ),
       body: Column(
         children: [
           Expanded(
             child: Image.memory(
-              _processedPng!,
+              _finalImage!,
               fit: BoxFit.contain,
             ),
           ),
@@ -182,8 +309,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
                       items: ClothingCategory.values
                           .map((c) => DropdownMenuItem(
                                 value: c.name,
-                                child: Text(c.name[0].toUpperCase() +
-                                    c.name.substring(1)),
+                                child: Text(c.displayName),
                               ))
                           .toList(),
                     ),

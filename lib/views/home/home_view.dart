@@ -7,27 +7,26 @@ class HomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Text(
-                _greeting(),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
+      appBar: AppBar(title: const Text('Home')),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+            child: Text(
+              _greeting(),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
-            Expanded(
-              child: PageView.builder(
-                itemCount: 0,
-                itemBuilder: (context, index) => const SizedBox.shrink(),
-              ),
+          ),
+          Expanded(
+            child: PageView.builder(
+              itemCount: 0,
+              itemBuilder: (context, index) => const SizedBox.shrink(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

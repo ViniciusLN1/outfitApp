@@ -15,6 +15,33 @@ class OutfitsView extends ConsumerStatefulWidget {
 class _OutfitsViewState extends ConsumerState<OutfitsView> {
   OutfitSortMode _sortMode = OutfitSortMode.favoritesFirst;
 
+  Future<void> _confirmDelete(String id, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir outfit'),
+        content: Text('Deseja excluir "$name"? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(outfitControllerProvider.notifier).deleteOutfit(id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final outfitsAsync = ref.watch(outfitsSortedProvider(_sortMode));
@@ -52,13 +79,14 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
             padding: const EdgeInsets.all(12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.75,
+              childAspectRatio: 0.72,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
             itemCount: outfits.length,
             itemBuilder: (context, index) {
               final outfit = outfits[index];
+              final isFav = outfit.isFavorite == 1;
               return Card(
                 child: Column(
                   children: [
@@ -76,20 +104,15 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
                       children: [
                         IconButton(
                           icon: Icon(
-                            outfit.isFavorite == 1
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: outfit.isFavorite == 1
-                                ? Colors.red
-                                : null,
+                            isFav ? Icons.star : Icons.star_border,
+                            color: isFav ? Colors.amber : null,
                           ),
                           onPressed: () => ref
                               .read(outfitControllerProvider.notifier)
-                              .toggleFavorite(outfit.id, outfit.isFavorite == 1),
+                              .toggleFavorite(outfit.id, isFav),
                         ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Editar'),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
                           onPressed: () async {
                             await ref
                                 .read(constructorControllerProvider.notifier)
@@ -98,6 +121,10 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
                                 .read(currentTabIndexProvider.notifier)
                                 .setTab(3);
                           },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          onPressed: () => _confirmDelete(outfit.id, outfit.name),
                         ),
                       ],
                     ),
