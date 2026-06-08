@@ -1,148 +1,30 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 
 import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
 
-class ConstructorView extends ConsumerWidget {
+class ConstructorView extends ConsumerStatefulWidget {
   const ConstructorView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canvas = ref.watch(constructorControllerProvider);
+  ConsumerState<ConstructorView> createState() => _ConstructorViewState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Construtor'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear_all),
-            tooltip: 'Limpar canvas',
-            onPressed: () =>
-                ref.read(constructorControllerProvider.notifier).clearAll(),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: _buildCanvas(canvas),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Center(
-              child: SizedBox(
-                width: 200,
-                child: ElevatedButton(
-                  onPressed: () => _showSaveDialog(context, ref, canvas),
-                  child: const Text('Salvar Outfit'),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _ConstructorViewState extends ConsumerState<ConstructorView> {
+  final _repaintKey = GlobalKey();
 
-  Widget _buildCanvas(CanvasState canvas) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Linha 1: Chapéu/Boné - centralizado
-        Center(
-          child: SizedBox(
-            width: 180,
-            child: _Slot(
-              category: ClothingCategory.chapeu,
-              item: canvas[ClothingCategory.chapeu],
-              height: 80,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Linha 2: Camisa | Blusa/Jaqueta
-        Row(
-          children: [
-            Expanded(
-              child: _Slot(
-                category: ClothingCategory.camisa,
-                item: canvas[ClothingCategory.camisa],
-                height: 120,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _Slot(
-                category: ClothingCategory.blusa,
-                item: canvas[ClothingCategory.blusa],
-                height: 120,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Linha 3: Cinto + Complemento à direita
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: _Slot(
-                category: ClothingCategory.cinto,
-                item: canvas[ClothingCategory.cinto],
-                height: 70,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _Slot(
-                category: ClothingCategory.complemento,
-                item: canvas[ClothingCategory.complemento],
-                height: 70,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        // Linha 4: Calça - centralizado
-        Center(
-          child: SizedBox(
-            width: 220,
-            child: _Slot(
-              category: ClothingCategory.calca,
-              item: canvas[ClothingCategory.calca],
-              height: 130,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Linha 5: Sapato - centralizado
-        Center(
-          child: SizedBox(
-            width: 180,
-            child: _Slot(
-              category: ClothingCategory.sapato,
-              item: canvas[ClothingCategory.sapato],
-              height: 80,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  void _showSaveDialog(BuildContext context, WidgetRef ref, CanvasState canvas) {
+  Future<void> _showSaveDialog(CanvasState canvas) async {
     final nameController = TextEditingController();
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Salvar Outfit'),
@@ -164,24 +46,210 @@ class ConstructorView extends ConsumerWidget {
               final name = nameController.text.trim();
               if (name.isEmpty) return;
               Navigator.pop(ctx);
+
               final itemIds = canvas.values
                   .whereType<ClothingItem>()
                   .map((i) => i.id)
                   .toList();
+
               await ref
                   .read(outfitControllerProvider.notifier)
                   .saveOutfit(name: name, itemIds: itemIds);
-              ref.read(constructorControllerProvider.notifier).clearAll();
-              if (context.mounted) {
+
+              if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Outfit salvo!')),
                 );
+                await _askExportToGallery();
               }
+
+              ref.read(constructorControllerProvider.notifier).clearAll();
             },
             child: const Text('Salvar'),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _askExportToGallery() async {
+    if (!mounted) return;
+    final export = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Salvar na galeria?'),
+        content:
+            const Text('Deseja salvar a imagem deste look na sua galeria de fotos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Não'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sim'),
+          ),
+        ],
+      ),
+    );
+
+    if (export != true || !mounted) return;
+
+    try {
+      final boundary = _repaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      final image = await boundary.toImage(
+        pixelRatio: MediaQuery.of(context).devicePixelRatio,
+      );
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+
+      final hasAccess = await Gal.hasAccess(toAlbum: true);
+      if (!hasAccess) await Gal.requestAccess(toAlbum: true);
+
+      await Gal.putImageBytes(pngBytes, album: 'OutfitApp');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Look salvo na galeria!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar na galeria: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canvas = ref.watch(constructorControllerProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Construtor'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.clear_all),
+            tooltip: 'Limpar canvas',
+            onPressed: () =>
+                ref.read(constructorControllerProvider.notifier).clearAll(),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: RepaintBoundary(
+                key: _repaintKey,
+                child: _buildCanvas(canvas),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Center(
+              child: SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  onPressed: () => _showSaveDialog(canvas),
+                  child: const Text('Salvar Outfit'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCanvas(CanvasState canvas) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: SizedBox(
+            width: 180,
+            child: _Slot(
+              category: ClothingCategory.chapeu,
+              item: canvas[ClothingCategory.chapeu],
+              height: 80,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.camisa,
+                item: canvas[ClothingCategory.camisa],
+                height: 120,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.blusa,
+                item: canvas[ClothingCategory.blusa],
+                height: 120,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: _Slot(
+                category: ClothingCategory.cinto,
+                item: canvas[ClothingCategory.cinto],
+                height: 70,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.complemento,
+                item: canvas[ClothingCategory.complemento],
+                height: 70,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: SizedBox(
+            width: 220,
+            child: _Slot(
+              category: ClothingCategory.calca,
+              item: canvas[ClothingCategory.calca],
+              height: 130,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: SizedBox(
+            width: 180,
+            child: _Slot(
+              category: ClothingCategory.sapato,
+              item: canvas[ClothingCategory.sapato],
+              height: 80,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

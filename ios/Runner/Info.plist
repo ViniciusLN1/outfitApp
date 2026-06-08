@@ -6,6 +6,10 @@
 	<string>Necessário para fotografar suas peças de roupa.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Requerido pelo plugin de câmera.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Necessário para selecionar fotos das suas peças de roupa.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Salvar looks montados na sua galeria de fotos.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

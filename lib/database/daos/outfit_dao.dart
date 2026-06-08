@@ -12,6 +12,12 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
 
   Stream<List<Outfit>> watchAll() => select(outfits).watch();
 
+  Stream<List<Outfit>> watchRecent({int limit = 10}) =>
+      (select(outfits)
+            ..orderBy([(t) => OrderingTerm.desc(t.dateCreated)])
+            ..limit(limit))
+          .watch();
+
   Stream<List<Outfit>> watchFavoritesFirst() =>
       (select(outfits)
             ..orderBy([(t) => OrderingTerm.desc(t.isFavorite)]))

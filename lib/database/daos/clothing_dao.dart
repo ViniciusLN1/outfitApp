@@ -20,6 +20,12 @@ class ClothingDao extends DatabaseAccessor<AppDatabase>
   Future<void> upsertItem(ClothingItemsCompanion item) =>
       into(clothingItems).insertOnConflictUpdate(item);
 
+  Stream<List<ClothingItem>> watchRecent({int limit = 10}) =>
+      (select(clothingItems)
+            ..orderBy([(t) => OrderingTerm.desc(t.dateAdded)])
+            ..limit(limit))
+          .watch();
+
   Future<int> deleteItem(String id) =>
       (delete(clothingItems)..where((t) => t.id.equals(id))).go();
 }

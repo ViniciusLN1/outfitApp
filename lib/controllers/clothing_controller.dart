@@ -21,6 +21,15 @@ Stream<List<ClothingItem>> clothingByCategory(ClothingByCategoryRef ref, String 
   return db.clothingDao.watchByCategory(category);
 }
 
+final recentClothingProvider = StreamProvider<List<ClothingItem>>((ref) {
+  return ref.watch(appDatabaseProvider).clothingDao.watchRecent(limit: 10);
+});
+
+final clothingItemsForOutfitProvider =
+    StreamProvider.family<List<ClothingItem>, String>((ref, outfitId) {
+  return ref.watch(appDatabaseProvider).watchClothingItemsForOutfit(outfitId);
+});
+
 @riverpod
 class ClothingController extends _$ClothingController {
   @override

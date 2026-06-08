@@ -30,6 +30,10 @@ Stream<int> totalOutfits(TotalOutfitsRef ref) {
   return db.outfits.count().watchSingle();
 }
 
+final recentOutfitsProvider = StreamProvider<List<Outfit>>((ref) {
+  return ref.watch(appDatabaseProvider).outfitDao.watchRecent(limit: 10);
+});
+
 @riverpod
 class OutfitController extends _$OutfitController {
   @override

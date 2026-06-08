@@ -22,6 +22,16 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  Stream<List<ClothingItem>> watchClothingItemsForOutfit(String outfitId) {
+    final query = select(clothingItems).join([
+      innerJoin(outfitItems, outfitItems.itemId.equalsExp(clothingItems.id)),
+    ])
+      ..where(outfitItems.outfitId.equals(outfitId));
+    return query.watch().map(
+          (rows) => rows.map((r) => r.readTable(clothingItems)).toList(),
+        );
+  }
 }
 
 LazyDatabase _openConnection() {
