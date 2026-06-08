@@ -307,19 +307,39 @@ class _EmptySlot extends StatelessWidget {
   final ClothingCategory category;
   const _EmptySlot({required this.category});
 
+  static const _iconMap = {
+    ClothingCategory.chapeu: Icons.sports_baseball,
+    ClothingCategory.camisa: Icons.checkroom,
+    ClothingCategory.blusa: Icons.dry_cleaning,
+    ClothingCategory.cinto: Icons.horizontal_rule,
+    ClothingCategory.calca: Icons.accessibility,
+    ClothingCategory.sapato: Icons.directions_walk,
+    ClothingCategory.complemento: Icons.watch_outlined,
+  };
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final icon = _iconMap[category] ?? Icons.add_circle_outline;
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        Icon(Icons.add_circle_outline, color: Colors.grey.shade400, size: 20),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            category.displayName,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
+        Icon(icon, size: 56, color: Colors.grey.withValues(alpha: 0.18)),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 28, color: Colors.grey.shade400),
+            const SizedBox(height: 4),
+            Text(
+              category.displayName,
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ],
     );

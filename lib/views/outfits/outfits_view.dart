@@ -11,6 +11,16 @@ import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
 import '../../services/image_storage_service.dart';
 
+const _categoryOrder = {
+  'chapeu': 0, 'camisa': 1, 'blusa': 2,
+  'cinto': 3, 'calca': 4, 'sapato': 5, 'complemento': 6,
+};
+
+List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
+    [...items]..sort((a, b) =>
+        (_categoryOrder[a.category] ?? 9).compareTo(
+          _categoryOrder[b.category] ?? 9));
+
 enum _ViewMode { outfits, items }
 
 class OutfitsView extends ConsumerStatefulWidget {
@@ -216,19 +226,25 @@ class _OutfitCard extends ConsumerWidget {
                         size: 48, color: Colors.grey.shade300),
                   );
                 }
-                return GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: items
-                      .take(4)
-                      .map(
-                        (it) => ExtendedImage.file(
-                          File(it.imagePath),
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                      .toList(),
+                return LayoutBuilder(
+                  builder: (ctx, constraints) {
+                    final visible = _sortAnatomically(items).take(3).toList();
+                    final slotH = constraints.maxHeight / visible.length;
+                    return Column(
+                      children: visible
+                          .map(
+                            (it) => SizedBox(
+                              width: constraints.maxWidth,
+                              height: slotH,
+                              child: ExtendedImage.file(
+                                File(it.imagePath),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
                 );
               },
               loading: () =>

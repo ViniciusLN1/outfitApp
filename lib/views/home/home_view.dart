@@ -7,13 +7,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../controllers/clothing_controller.dart';
 import '../../controllers/outfit_controller.dart';
+import '../../controllers/profile_controller.dart';
 import '../../database/app_database.dart';
+
+const _categoryOrder = {
+  'chapeu': 0, 'camisa': 1, 'blusa': 2,
+  'cinto': 3, 'calca': 4, 'sapato': 5, 'complemento': 6,
+};
+
+List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
+    [...items]..sort((a, b) =>
+        (_categoryOrder[a.category] ?? 9).compareTo(
+          _categoryOrder[b.category] ?? 9));
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final username = ref.watch(profileProvider).username;
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
       body: ListView(
@@ -22,7 +34,7 @@ class HomeView extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Text(
-              _greeting(),
+              _greeting(username),
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -40,11 +52,10 @@ class HomeView extends ConsumerWidget {
     );
   }
 
-  String _greeting() {
+  String _greeting(String name) {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Bom dia!';
-    if (h < 18) return 'Boa tarde!';
-    return 'Boa noite!';
+    final base = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+    return '$base, $name!';
   }
 }
 
@@ -295,19 +306,26 @@ class _OutfitCard extends ConsumerWidget {
                           size: 48, color: Colors.grey.shade400),
                     );
                   }
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: items
-                        .take(4)
-                        .map(
-                          (it) => ExtendedImage.file(
-                            File(it.imagePath),
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                        .toList(),
+                  return LayoutBuilder(
+                    builder: (ctx, constraints) {
+                      final sorted = _sortAnatomically(items);
+                      final visible = sorted.take(3).toList();
+                      final slotH = constraints.maxHeight / visible.length;
+                      return Column(
+                        children: visible
+                            .map(
+                              (it) => SizedBox(
+                                width: constraints.maxWidth,
+                                height: slotH,
+                                child: ExtendedImage.file(
+                                  File(it.imagePath),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
                   );
                 },
                 loading: () =>
