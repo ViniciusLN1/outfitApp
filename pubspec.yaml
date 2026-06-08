@@ -32,6 +32,9 @@ dependencies:
   # UUID para geração de IDs
   uuid: ^4.5.3
 
+  # Seleção de imagem da galeria
+  image_picker: ^1.1.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

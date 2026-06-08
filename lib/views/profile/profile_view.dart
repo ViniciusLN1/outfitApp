@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../controllers/outfit_controller.dart';
+import '../../controllers/theme_controller.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -10,8 +11,11 @@ class ProfileView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final totalItems = ref.watch(totalClothingItemsProvider);
     final totalOutfitsCount = ref.watch(totalOutfitsProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode == ThemeMode.dark;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Perfil')),
       body: SafeArea(
         child: Center(
           child: Column(
@@ -33,6 +37,26 @@ class ProfileView extends ConsumerWidget {
                   _StatCard(label: 'Peças', valueAsync: totalItems),
                   _StatCard(label: 'Outfits', valueAsync: totalOutfitsCount),
                 ],
+              ),
+              const SizedBox(height: 40),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.light_mode),
+                  const SizedBox(width: 8),
+                  Switch(
+                    value: isDark,
+                    onChanged: (v) => ref.read(themeModeProvider.notifier).state =
+                        v ? ThemeMode.dark : ThemeMode.light,
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.dark_mode),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isDark ? 'Tema Escuro' : 'Tema Claro',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
@@ -69,7 +93,8 @@ class _StatCard extends StatelessWidget {
                 width: 36,
                 child: CircularProgressIndicator(),
               ),
-              error: (err, st) => const Text('--', style: TextStyle(fontSize: 36)),
+              error: (err, st) =>
+                  const Text('--', style: TextStyle(fontSize: 36)),
             ),
             const SizedBox(height: 4),
             Text(label, style: const TextStyle(color: Colors.grey)),

@@ -31,24 +31,20 @@ class ConstructorView extends ConsumerWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              children: ClothingCategory.values
-                  .map((cat) => _CategorySlot(
-                        category: cat,
-                        item: canvas[cat],
-                      ))
-                  .toList(),
+              child: _buildCanvas(canvas),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.save),
-                label: const Text('Salvar Outfit'),
-                onPressed: () => _showSaveDialog(context, ref, canvas),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Center(
+              child: SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  onPressed: () => _showSaveDialog(context, ref, canvas),
+                  child: const Text('Salvar Outfit'),
+                ),
               ),
             ),
           ),
@@ -57,11 +53,94 @@ class ConstructorView extends ConsumerWidget {
     );
   }
 
-  void _showSaveDialog(
-    BuildContext context,
-    WidgetRef ref,
-    CanvasState canvas,
-  ) {
+  Widget _buildCanvas(CanvasState canvas) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Linha 1: Chapéu/Boné - centralizado
+        Center(
+          child: SizedBox(
+            width: 180,
+            child: _Slot(
+              category: ClothingCategory.chapeu,
+              item: canvas[ClothingCategory.chapeu],
+              height: 80,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Linha 2: Camisa | Blusa/Jaqueta
+        Row(
+          children: [
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.camisa,
+                item: canvas[ClothingCategory.camisa],
+                height: 120,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.blusa,
+                item: canvas[ClothingCategory.blusa],
+                height: 120,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Linha 3: Cinto + Complemento à direita
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: _Slot(
+                category: ClothingCategory.cinto,
+                item: canvas[ClothingCategory.cinto],
+                height: 70,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _Slot(
+                category: ClothingCategory.complemento,
+                item: canvas[ClothingCategory.complemento],
+                height: 70,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Linha 4: Calça - centralizado
+        Center(
+          child: SizedBox(
+            width: 220,
+            child: _Slot(
+              category: ClothingCategory.calca,
+              item: canvas[ClothingCategory.calca],
+              height: 130,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Linha 5: Sapato - centralizado
+        Center(
+          child: SizedBox(
+            width: 180,
+            child: _Slot(
+              category: ClothingCategory.sapato,
+              item: canvas[ClothingCategory.sapato],
+              height: 80,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  void _showSaveDialog(BuildContext context, WidgetRef ref, CanvasState canvas) {
     final nameController = TextEditingController();
     showDialog<void>(
       context: context,
@@ -107,19 +186,24 @@ class ConstructorView extends ConsumerWidget {
   }
 }
 
-class _CategorySlot extends ConsumerWidget {
+class _Slot extends ConsumerWidget {
   final ClothingCategory category;
   final ClothingItem? item;
+  final double height;
 
-  const _CategorySlot({required this.category, required this.item});
+  const _Slot({
+    required this.category,
+    required this.item,
+    this.height = 100,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () => _openSheet(context, ref),
-      child: Container(
-        height: 110,
-        margin: const EdgeInsets.only(bottom: 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: height,
         decoration: BoxDecoration(
           border: Border.all(
             color: item != null
@@ -128,10 +212,16 @@ class _CategorySlot extends ConsumerWidget {
             width: item != null ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
+          color: item != null
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.04)
+              : null,
         ),
-        child: item == null
-            ? _EmptySlot(category: category)
-            : _FilledSlot(item: item!),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: item == null
+              ? _EmptySlot(category: category)
+              : _FilledSlot(item: item!),
+        ),
       ),
     );
   }
@@ -140,14 +230,13 @@ class _CategorySlot extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _CategoryBottomSheet(category: category),
+      builder: (_) => _CategorySheet(category: category),
     );
   }
 }
 
 class _EmptySlot extends StatelessWidget {
   final ClothingCategory category;
-
   const _EmptySlot({required this.category});
 
   @override
@@ -155,11 +244,14 @@ class _EmptySlot extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.add_circle_outline, color: Colors.grey.shade400),
-        const SizedBox(width: 8),
-        Text(
-          category.name[0].toUpperCase() + category.name.substring(1),
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+        Icon(Icons.add_circle_outline, color: Colors.grey.shade400, size: 20),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            category.displayName,
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -168,27 +260,23 @@ class _EmptySlot extends StatelessWidget {
 
 class _FilledSlot extends StatelessWidget {
   final ClothingItem item;
-
   const _FilledSlot({required this.item});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        ClipRRect(
-          borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-          child: ExtendedImage.file(
-            File(item.imagePath),
-            width: 90,
-            height: 110,
-            fit: BoxFit.cover,
-          ),
+        ExtendedImage.file(
+          File(item.imagePath),
+          width: 70,
+          fit: BoxFit.cover,
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             item.name,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -196,10 +284,9 @@ class _FilledSlot extends StatelessWidget {
   }
 }
 
-class _CategoryBottomSheet extends ConsumerWidget {
+class _CategorySheet extends ConsumerWidget {
   final ClothingCategory category;
-
-  const _CategoryBottomSheet({required this.category});
+  const _CategorySheet({required this.category});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -212,7 +299,7 @@ class _CategoryBottomSheet extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              category.name[0].toUpperCase() + category.name.substring(1),
+              category.displayName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),

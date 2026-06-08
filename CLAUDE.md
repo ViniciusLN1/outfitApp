@@ -1,7 +1,7 @@
 # Especificação do Projeto: Guarda-Roupa Digital & Outfit Planner
 
 ## 1. Visão Geral
-Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogação de peças de roupa com remoção automática de fundo e montagem/planejamento de looks (outfits). Todo o ecossistema é projetado para máxima performance visual, fluidez de interface e processamento assíncrono de imagens.
+Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogação de peças de roupa com remoção opcional de fundo e montagem/planejamento de looks (outfits). Todo o ecossistema é projetado para máxima performance visual, fluidez de interface e processamento assíncrono de imagens.
 
 ## 2. Stack Tecnológica Justificada
 
@@ -22,7 +22,21 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 
 ---
 
-## 3. Arquitetura de Navegação (Bottom Navigation Bar)
+## 3. Design System & Regras Visuais
+
+### Paleta de Cores
+- **Primárias:** Branco e Azul Escuro.
+- **Tema:** O app suporta Tema Claro e Tema Escuro, alternáveis na **Aba 5 (Perfil)**. Usar `ThemeMode` do Flutter gerenciado por estado global (ex: Provider ou Riverpod).
+- **Favorito:** Ícone de **Estrela** (substitui coração). Estrela **amarela** quando ativo, cinza/contornada quando inativo.
+
+### Layout Global
+- **Header:** Todas as abas possuem um header fino no topo com o título da aba centralizado.
+- **Bottom Navigation Bar:** Altura reduzida em relação ao padrão do Material. Labels curtos e ícones pequenos.
+- **Botão "Salvar Outfit":** Tamanho horizontal reduzido (não ocupa toda a largura). Sem ícone de disquete — apenas texto.
+
+---
+
+## 4. Arquitetura de Navegação (Bottom Navigation Bar)
 
 ### Aba 1: Home (Destaques e Recomendações)
 - **Interface:** Layout limpo com uma saudação dinâmica baseada no horário do dia.
@@ -32,26 +46,35 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 ### Aba 2: Outfits (Catálogo Geral)
 - **Interface:** Um Grid View responsivo mostrando todos os outfits salvos.
 - **Funcionalidades Críticas:**
-  - **Favoritar:** Ícone de coração que altera instantaneamente o booleano no banco de dados e joga o item para o topo (Mecanismo de fixação).
+  - **Favoritar:** Ícone de **estrela** que altera instantaneamente o booleano no banco de dados e joga o item para o topo (Mecanismo de fixação). Estrela amarela = ativo.
+  - **Excluir:** Cada card de outfit possui opção de exclusão (ex: botão de lixeira ou swipe-to-delete), que remove o outfit do banco de dados com confirmação via dialog.
   - **Ordenação/Filtros:** Toggle ou Dropdown para alternar entre "Favoritos Primeiro" e "Mais Utilizados" (Ordenação decrescente baseada no contador de uso do look).
   - **Edição:** Um botão de ação em cada look que captura os IDs das peças componentes, empacota em um objeto de estado e despacha o usuário para a **Aba 4**, preenchendo a interface de montagem automaticamente.
 
 ### Aba 3: Captura (Câmera & Catalogação)
-- **Interface:** Inicializa diretamente o plugin de câmera nativa em tela cheia.
+- **Interface:** Exibe um seletor de origem da imagem: **Câmera** ou **Galeria**.
 - **Fluxo de Trabalho:**
-  1. **Captura:** O usuário bate a foto da peça. O app exibe um indicador de carregamento (Spinner) enquanto envia o arquivo para a API Python.
-  2. **Processamento:** A API Python processa a remoção de fundo e devolve o arquivo PNG limpo.
-  3. **Formulário de Entrada:** A tela se divide. A metade superior exibe o preview perfeito da peça flutuando sem fundo. A metade inferior renderiza um formulário com:
+  1. **Seleção de Origem:** O usuário escolhe entre abrir a câmera nativa ou selecionar uma imagem da galeria do dispositivo.
+  2. **Pergunta de Remoção de Fundo:** Após a escolha/captura da imagem, o app exibe um dialog perguntando: **"Deseja remover o fundo desta imagem?"** com opções **Sim** e **Não**.
+     - **Sim:** O app exibe um Spinner enquanto envia a imagem para a API Python. A API devolve o PNG sem fundo.
+     - **Não:** A imagem original é usada diretamente, sem chamada à API.
+  3. **Formulário de Entrada:** A tela se divide. A metade superior exibe o preview da peça (com ou sem fundo conforme a escolha). A metade inferior renderiza um formulário com:
      - `Campo de Texto`: Nome descritivo da peça.
-     - `Dropdown/Segmented Control`: Categoria estrita (Camisa, Calça, Sapato, Cinto, Complemento).
+     - `Dropdown/Segmented Control`: Categoria estrita (Chapéu/Boné, Camisa, Blusa/Jaqueta, Cinto, Calça, Sapato, Complemento).
   4. **Persistência:** Um botão destacado "Salvar Peça" grava o arquivo PNG no diretório local do dispositivo (`ApplicationDocumentsDirectory`) e insere os metadados no banco de dados local.
 
 ### Aba 4: Construtor (Montagem de Looks)
-- **Interface:** Um canvas vertical estruturado imitando a anatomia humana. Exibe blocos vazios (Threshold Placeholders) pontilhados com ícones correspondentes a cada categoria (Camisa no topo, Calça no meio, Cinto na divisão, Sapatos na base, etc.).
+- **Interface:** Um canvas vertical estruturado imitando a anatomia humana. Exibe blocos vazios (Threshold Placeholders) pontilhados com ícones correspondentes a cada categoria, na seguinte **ordem de cima para baixo:**
+  1. **Chapéu/Boné** (topo)
+  2. **Camisa** (centro-topo) | **Blusa/Jaqueta** (ao lado direito da Camisa)
+  3. **Cinto** (divisão)
+  4. **Calça** (centro)
+  5. **Sapato** (base)
+  - **Complementos** ficam agrupados em coluna centralizada à esquerda do canvas.
 - **Comportamento Interativo:**
-  - Ao tocar em qualquer placeholder (ex: Camisa), um Modal inferior (`BottomSheet`) desliza exibindo em formato grid apenas as peças cadastradas pertencentes àquela categoria específica.
+  - Ao tocar em qualquer placeholder, um Modal inferior (`BottomSheet`) desliza exibindo em formato grid apenas as peças cadastradas pertencentes àquela categoria específica.
   - Ao selecionar a peça, ela assume o lugar do threshold visualmente através de uma animação suave de transição.
-  - **Regra de Negócio:** O botão "Salvar Outfit" fica sempre ativo. O usuário pode salvar a combinação mesmo deixando thresholds vazios (ex: look sem cinto ou sem acessório complementar).
+  - **Regra de Negócio:** O botão **"Salvar Outfit"** fica sempre ativo. O usuário pode salvar a combinação mesmo deixando thresholds vazios (ex: look sem cinto ou complemento). O botão tem largura reduzida (não ocupa a tela toda) e **não possui ícone de disquete**.
   - **Suporte a Edição:** Caso venha com dados de edição da Aba 2, os placeholders correspondentes já renderizam as imagens das roupas salvas previamente.
 
 ### Aba 5: Perfil e Analytics
@@ -59,10 +82,11 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 - **Métricas:** Cards estatísticos alimentados por queries reativas (`Stream`) do banco de dados local:
   - Total exato de peças catalogadas.
   - Total de outfits criados.
+- **Configurações:** Contém o toggle de **Tema Claro / Tema Escuro** que altera o `ThemeMode` globalmente.
 
 ---
 
-## 4. Modelagem de Dados Relacional (Esquema SQLite)
+## 5. Modelagem de Dados Relacional (Esquema SQLite)
 
 ### Tabela: `clothing_items`
 - `id`: TEXT (UUID) [Primary Key]
