@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class BackgroundRemovalService {
   // 10.0.2.2 = host machine via emulador Android.
   // Para dispositivo físico, usar o IP LAN da máquina host.
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+  static const String _baseUrl = 'http://192.168.100.232:8000';
 
   Future<Uint8List> removeBackground(
     Uint8List imageBytes, {
