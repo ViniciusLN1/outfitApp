@@ -44,6 +44,10 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
       (update(outfits)..where((t) => t.id.equals(id)))
           .write(OutfitsCompanion(isFavorite: Value(newValue ? 1 : 0)));
 
+  Future<void> renameOutfit(String id, String name) =>
+      (update(outfits)..where((t) => t.id.equals(id)))
+          .write(OutfitsCompanion(name: Value(name)));
+
   Future<void> incrementUsage(String id) async {
     final outfit =
         await (select(outfits)..where((t) => t.id.equals(id))).getSingle();

@@ -12,7 +12,7 @@ enum ClothingCategory {
   cinto,
   calca,
   sapato,
-  complemento,
+  acessorios,
 }
 
 extension ClothingCategoryLabel on ClothingCategory {
@@ -23,7 +23,7 @@ extension ClothingCategoryLabel on ClothingCategory {
         ClothingCategory.cinto => 'Cinto',
         ClothingCategory.calca => 'Calça',
         ClothingCategory.sapato => 'Sapato',
-        ClothingCategory.complemento => 'Complemento',
+        ClothingCategory.acessorios => 'Acessórios',
       };
 }
 
@@ -39,7 +39,7 @@ class ConstructorController extends _$ConstructorController {
         ClothingCategory.cinto: null,
         ClothingCategory.calca: null,
         ClothingCategory.sapato: null,
-        ClothingCategory.complemento: null,
+        ClothingCategory.acessorios: null,
       };
 
   void selectItem(ClothingCategory category, ClothingItem? item) {
@@ -63,7 +63,7 @@ class ConstructorController extends _$ConstructorController {
       for (final item in allItems.where((i) => itemIds.contains(i.id)))
         ClothingCategory.values.firstWhere(
           (c) => c.name == item.category,
-          orElse: () => ClothingCategory.complemento,
+          orElse: () => ClothingCategory.acessorios,
         ): item,
     };
     state = {...build(), ...relevant};

@@ -65,6 +65,11 @@ class OutfitController extends _$OutfitController {
     await db.outfitDao.toggleFavorite(id, !currentValue);
   }
 
+  Future<void> renameOutfit(String id, String name) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.outfitDao.renameOutfit(id, name);
+  }
+
   Future<void> deleteOutfit(String id) async {
     final db = ref.read(appDatabaseProvider);
     await db.outfitDao.deleteOutfit(id);

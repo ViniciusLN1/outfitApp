@@ -13,7 +13,7 @@ import '../../services/image_storage_service.dart';
 
 const _categoryOrder = {
   'chapeu': 0, 'camisa': 1, 'blusa': 2,
-  'cinto': 3, 'calca': 4, 'sapato': 5, 'complemento': 6,
+  'cinto': 3, 'calca': 4, 'sapato': 5, 'acessorios': 6,
 };
 
 List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
@@ -33,6 +33,25 @@ class OutfitsView extends ConsumerStatefulWidget {
 class _OutfitsViewState extends ConsumerState<OutfitsView> {
   OutfitSortMode _sortMode = OutfitSortMode.favoritesFirst;
   _ViewMode _viewMode = _ViewMode.outfits;
+  ClothingCategory? _itemCategoryFilter;
+
+  void _openOutfitDetail(Outfit outfit) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _OutfitDetailSheet(outfit: outfit),
+    );
+  }
+
+  void _openItemDetail(ClothingItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _ItemDetailSheet(item: item),
+    );
+  }
 
   Future<void> _confirmDeleteOutfit(String id, String name) async {
     final confirmed = await showDialog<bool>(
@@ -114,6 +133,27 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
                   ),
                 ],
               ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: DropdownButton<ClothingCategory?>(
+                value: _itemCategoryFilter,
+                underline: const SizedBox.shrink(),
+                onChanged: (v) => setState(() => _itemCategoryFilter = v),
+                items: [
+                  const DropdownMenuItem<ClothingCategory?>(
+                    value: null,
+                    child: Text('Todas'),
+                  ),
+                  ...ClothingCategory.values.map(
+                    (c) => DropdownMenuItem<ClothingCategory?>(
+                      value: c,
+                      child: Text(c.displayName),
+                    ),
+                  ),
+                ],
+              ),
             ),
         ],
       ),
@@ -165,8 +205,11 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
             mainAxisSpacing: 12,
           ),
           itemCount: outfits.length,
-          itemBuilder: (context, index) =>
-              _OutfitCard(outfit: outfits[index], onDelete: _confirmDeleteOutfit),
+          itemBuilder: (context, index) => _OutfitCard(
+            outfit: outfits[index],
+            onDelete: _confirmDeleteOutfit,
+            onTap: () => _openOutfitDetail(outfits[index]),
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -177,9 +220,20 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
   Widget _buildItemsGrid() {
     final itemsAsync = ref.watch(clothingItemsProvider);
     return itemsAsync.when(
-      data: (items) {
+      data: (all) {
+        final items = _itemCategoryFilter == null
+            ? all
+            : all
+                .where((i) => i.category == _itemCategoryFilter!.name)
+                .toList();
         if (items.isEmpty) {
-          return const Center(child: Text('Nenhuma peça cadastrada ainda.'));
+          return Center(
+            child: Text(
+              _itemCategoryFilter == null
+                  ? 'Nenhuma peça cadastrada ainda.'
+                  : 'Nenhuma peça nesta categoria.',
+            ),
+          );
         }
         return GridView.builder(
           padding: const EdgeInsets.all(12),
@@ -190,8 +244,11 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
             mainAxisSpacing: 12,
           ),
           itemCount: items.length,
-          itemBuilder: (context, index) =>
-              _ClothingItemCard(item: items[index], onDelete: _confirmDeleteItem),
+          itemBuilder: (context, index) => _ClothingItemCard(
+            item: items[index],
+            onDelete: _confirmDeleteItem,
+            onTap: () => _openItemDetail(items[index]),
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -205,8 +262,13 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
 class _OutfitCard extends ConsumerWidget {
   final Outfit outfit;
   final Future<void> Function(String id, String name) onDelete;
+  final VoidCallback onTap;
 
-  const _OutfitCard({required this.outfit, required this.onDelete});
+  const _OutfitCard({
+    required this.outfit,
+    required this.onDelete,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -218,7 +280,10 @@ class _OutfitCard extends ConsumerWidget {
       child: Column(
         children: [
           Expanded(
-            child: itemsAsync.when(
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: itemsAsync.when(
               data: (items) {
                 if (items.isEmpty) {
                   return Center(
@@ -250,6 +315,7 @@ class _OutfitCard extends ConsumerWidget {
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => const SizedBox.shrink(),
+            ),
             ),
           ),
           Padding(
@@ -311,8 +377,13 @@ class _OutfitCard extends ConsumerWidget {
 class _ClothingItemCard extends StatelessWidget {
   final ClothingItem item;
   final Future<void> Function(ClothingItem) onDelete;
+  final VoidCallback onTap;
 
-  const _ClothingItemCard({required this.item, required this.onDelete});
+  const _ClothingItemCard({
+    required this.item,
+    required this.onDelete,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -322,10 +393,14 @@ class _ClothingItemCard extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            child: ExtendedImage.file(
-              File(item.imagePath),
-              fit: BoxFit.cover,
-              width: double.infinity,
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: ExtendedImage.file(
+                File(item.imagePath),
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
             ),
           ),
           Padding(
@@ -374,6 +449,293 @@ class _ClothingItemCard extends StatelessWidget {
           const SizedBox(height: 4),
         ],
       ),
+    );
+  }
+}
+
+// ─── Detalhes / Edição (BottomSheet) ──────────────────────────────────────────
+
+class _DetailSheetScaffold extends StatelessWidget {
+  final Widget preview;
+  final List<Widget> children;
+
+  const _DetailSheetScaffold({required this.preview, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                height: MediaQuery.of(context).size.height * 0.34,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  border: Border.all(color: scheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: preview,
+              ),
+              const SizedBox(height: 18),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemDetailSheet extends ConsumerStatefulWidget {
+  final ClothingItem item;
+  const _ItemDetailSheet({required this.item});
+
+  @override
+  ConsumerState<_ItemDetailSheet> createState() => _ItemDetailSheetState();
+}
+
+class _ItemDetailSheetState extends ConsumerState<_ItemDetailSheet> {
+  late final TextEditingController _nameCtrl;
+  late String _category;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.item.name);
+    _category =
+        ClothingCategory.values.any((c) => c.name == widget.item.category)
+            ? widget.item.category
+            : ClothingCategory.camisa.name;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Digite um nome para a peça.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    await ref.read(clothingControllerProvider.notifier).updateItem(
+          id: widget.item.id,
+          name: name,
+          category: _category,
+        );
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Peça atualizada!')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSheetScaffold(
+      preview: ExtendedImage.file(
+        File(widget.item.imagePath),
+        fit: BoxFit.contain,
+      ),
+      children: [
+        TextField(
+          controller: _nameCtrl,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Nome da peça',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Categoria',
+            border: OutlineInputBorder(),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _category,
+              isDense: true,
+              isExpanded: true,
+              onChanged: (v) => setState(() => _category = v!),
+              items: ClothingCategory.values
+                  .map((c) => DropdownMenuItem(
+                        value: c.name,
+                        child: Text(c.displayName),
+                      ))
+                  .toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: _saving ? null : _save,
+          child: const Text('Salvar Alterações'),
+        ),
+      ],
+    );
+  }
+}
+
+class _OutfitDetailSheet extends ConsumerStatefulWidget {
+  final Outfit outfit;
+  const _OutfitDetailSheet({required this.outfit});
+
+  @override
+  ConsumerState<_OutfitDetailSheet> createState() => _OutfitDetailSheetState();
+}
+
+class _OutfitDetailSheetState extends ConsumerState<_OutfitDetailSheet> {
+  late final TextEditingController _nameCtrl;
+  late bool _isFav;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.outfit.name);
+    _isFav = widget.outfit.isFavorite == 1;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleFav() async {
+    await ref
+        .read(outfitControllerProvider.notifier)
+        .toggleFavorite(widget.outfit.id, _isFav);
+    if (mounted) setState(() => _isFav = !_isFav);
+  }
+
+  Future<void> _save() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Digite um nome para o outfit.')),
+      );
+      return;
+    }
+    await ref
+        .read(outfitControllerProvider.notifier)
+        .renameOutfit(widget.outfit.id, name);
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Outfit atualizado!')),
+    );
+  }
+
+  Future<void> _editInConstructor() async {
+    await ref
+        .read(constructorControllerProvider.notifier)
+        .loadOutfit(widget.outfit.id);
+    if (!mounted) return;
+    Navigator.pop(context);
+    ref.read(currentTabIndexProvider.notifier).setTab(3);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemsAsync =
+        ref.watch(clothingItemsForOutfitProvider(widget.outfit.id));
+    final scheme = Theme.of(context).colorScheme;
+    return _DetailSheetScaffold(
+      preview: itemsAsync.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return Center(
+              child: Icon(Icons.style_outlined,
+                  size: 48, color: scheme.onSurfaceVariant),
+            );
+          }
+          return Row(
+            children: _sortAnatomically(items)
+                .map((it) => Expanded(
+                      child: ExtendedImage.file(
+                        File(it.imagePath),
+                        fit: BoxFit.contain,
+                      ),
+                    ))
+                .toList(),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const SizedBox.shrink(),
+      ),
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Favoritar',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+            IconButton(
+              iconSize: 28,
+              icon: Icon(
+                _isFav ? Icons.star : Icons.star_border,
+                color: _isFav ? Colors.amber : null,
+              ),
+              onPressed: _toggleFav,
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: _nameCtrl,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Nome do outfit',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _editInConstructor,
+                child: const Text('Editar peças'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _save,
+                child: const Text('Salvar'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

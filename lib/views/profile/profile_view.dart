@@ -163,7 +163,6 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
         child: Column(

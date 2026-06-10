@@ -50,6 +50,15 @@ class ClothingController extends _$ClothingController {
     ));
   }
 
+  Future<void> updateItem({
+    required String id,
+    required String name,
+    required String category,
+  }) async {
+    final db = ref.read(appDatabaseProvider);
+    await db.clothingDao.updateItem(id, name: name, category: category);
+  }
+
   Future<void> deleteItem(String id) async {
     final db = ref.read(appDatabaseProvider);
     await db.clothingDao.deleteItem(id);

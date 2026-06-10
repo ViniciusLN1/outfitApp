@@ -172,56 +172,49 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
   }
 
   Widget _buildCanvas(CanvasState canvas) {
+    // Eixo central vertical e simétrico: chapéu, camisa, cinto, calça, sapato.
+    // Acessórios à esquerda da camisa; Blusa/Jaqueta à direita.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(
           child: SizedBox(
-            width: 180,
+            width: 150,
             child: _Slot(
               category: ClothingCategory.chapeu,
               item: canvas[ClothingCategory.chapeu],
-              height: 80,
+              height: 72,
             ),
           ),
         ),
         const SizedBox(height: 10),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
+              flex: 3,
+              child: _Slot(
+                category: ClothingCategory.acessorios,
+                item: canvas[ClothingCategory.acessorios],
+                height: 96,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 4,
               child: _Slot(
                 category: ClothingCategory.camisa,
                 item: canvas[ClothingCategory.camisa],
-                height: 120,
+                height: 144,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
+              flex: 3,
               child: _Slot(
                 category: ClothingCategory.blusa,
                 item: canvas[ClothingCategory.blusa],
-                height: 120,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: _Slot(
-                category: ClothingCategory.cinto,
-                item: canvas[ClothingCategory.cinto],
-                height: 70,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _Slot(
-                category: ClothingCategory.complemento,
-                item: canvas[ClothingCategory.complemento],
-                height: 70,
+                height: 96,
               ),
             ),
           ],
@@ -229,22 +222,33 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
         const SizedBox(height: 10),
         Center(
           child: SizedBox(
-            width: 220,
+            width: 200,
             child: _Slot(
-              category: ClothingCategory.calca,
-              item: canvas[ClothingCategory.calca],
-              height: 130,
+              category: ClothingCategory.cinto,
+              item: canvas[ClothingCategory.cinto],
+              height: 54,
             ),
           ),
         ),
         const SizedBox(height: 10),
         Center(
           child: SizedBox(
-            width: 180,
+            width: 190,
+            child: _Slot(
+              category: ClothingCategory.calca,
+              item: canvas[ClothingCategory.calca],
+              height: 150,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: SizedBox(
+            width: 150,
             child: _Slot(
               category: ClothingCategory.sapato,
               item: canvas[ClothingCategory.sapato],
-              height: 80,
+              height: 78,
             ),
           ),
         ),
@@ -276,16 +280,16 @@ class _Slot extends ConsumerWidget {
           border: Border.all(
             color: item != null
                 ? Theme.of(context).colorScheme.primary
-                : Colors.grey.shade400,
-            width: item != null ? 2 : 1,
+                : Theme.of(context).colorScheme.outlineVariant,
+            width: item != null ? 1.6 : 1,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(4),
           color: item != null
               ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.04)
               : null,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(3),
           child: item == null
               ? _EmptySlot(category: category)
               : _FilledSlot(item: item!),
@@ -307,39 +311,48 @@ class _EmptySlot extends StatelessWidget {
   final ClothingCategory category;
   const _EmptySlot({required this.category});
 
+  // Ícone semântico por categoria (Material não possui glifos próprios de
+  // calça/sapato/cinto/chapéu — usamos o mais próximo de cada peça).
   static const _iconMap = {
-    ClothingCategory.chapeu: Icons.sports_baseball,
-    ClothingCategory.camisa: Icons.checkroom,
-    ClothingCategory.blusa: Icons.dry_cleaning,
-    ClothingCategory.cinto: Icons.horizontal_rule,
-    ClothingCategory.calca: Icons.accessibility,
-    ClothingCategory.sapato: Icons.directions_walk,
-    ClothingCategory.complemento: Icons.watch_outlined,
+    ClothingCategory.chapeu: Icons.sports_baseball, // boné
+    ClothingCategory.camisa: Icons.checkroom, // camisa no cabide
+    ClothingCategory.blusa: Icons.dry_cleaning, // jaqueta/blusa
+    ClothingCategory.cinto: Icons.horizontal_rule, // cinto
+    ClothingCategory.calca: Icons.accessibility_new, // calça (silhueta)
+    ClothingCategory.sapato: Icons.directions_walk, // sapato
+    ClothingCategory.acessorios: Icons.watch, // acessórios
   };
 
   @override
   Widget build(BuildContext context) {
     final icon = _iconMap[category] ?? Icons.add_circle_outline;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Stack(
       alignment: Alignment.center,
       children: [
-        Icon(icon, size: 56, color: Colors.grey.withValues(alpha: 0.18)),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 28, color: Colors.grey.shade400),
-            const SizedBox(height: 4),
-            Text(
-              category.displayName,
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+        Icon(icon, size: 56, color: muted.withValues(alpha: 0.12)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 26, color: muted.withValues(alpha: 0.7)),
+              const SizedBox(height: 4),
+              Text(
+                category.displayName,
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -352,22 +365,37 @@ class _FilledSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ExtendedImage.file(
-          File(item.imagePath),
-          width: 70,
-          fit: BoxFit.cover,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            item.name,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Slots laterais estreitos: exibe apenas a peça, centralizada.
+        if (constraints.maxWidth < 130) {
+          return Padding(
+            padding: const EdgeInsets.all(6),
+            child: ExtendedImage.file(
+              File(item.imagePath),
+              fit: BoxFit.contain,
+            ),
+          );
+        }
+        return Row(
+          children: [
+            ExtendedImage.file(
+              File(item.imagePath),
+              width: 70,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                item.name,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

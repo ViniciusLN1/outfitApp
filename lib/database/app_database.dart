@@ -21,7 +21,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await customStatement(
+              "UPDATE clothing_items SET category = 'acessorios' "
+              "WHERE category = 'complemento'",
+            );
+          }
+        },
+      );
 
   Stream<List<ClothingItem>> watchClothingItemsForOutfit(String outfitId) {
     final query = select(clothingItems).join([

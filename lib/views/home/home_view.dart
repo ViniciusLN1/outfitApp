@@ -6,13 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../controllers/clothing_controller.dart';
+import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../database/app_database.dart';
 
 const _categoryOrder = {
   'chapeu': 0, 'camisa': 1, 'blusa': 2,
-  'cinto': 3, 'calca': 4, 'sapato': 5, 'complemento': 6,
+  'cinto': 3, 'calca': 4, 'sapato': 5, 'acessorios': 6,
 };
 
 List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
@@ -32,7 +33,7 @@ class HomeView extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
             child: Text(
               _greeting(username),
               style: Theme.of(context)
@@ -41,10 +42,13 @@ class HomeView extends ConsumerWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(height: 12),
+          const _SuggestionCard(),
+          const SizedBox(height: 22),
+          const _ClosetMetrics(),
+          const SizedBox(height: 26),
           _SectionLabel(label: 'Peças Recentes'),
           const _RecentItemsCarousel(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
           _SectionLabel(label: 'Seus Outfits'),
           const _RecentOutfitsCarousel(),
         ],
@@ -73,6 +77,194 @@ class _SectionLabel extends StatelessWidget {
             .textTheme
             .titleMedium
             ?.copyWith(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// ─── Sugestão do Dia ─────────────────────────────────────────────────────────
+
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, message) = _suggestion(DateTime.now().hour);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: scheme.onPrimary, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SUGESTÃO DO DIA',
+                    style: TextStyle(
+                      color: scheme.onPrimary.withValues(alpha: 0.7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  (IconData, String) _suggestion(int hour) {
+    if (hour < 12) {
+      return (
+        Icons.wb_twilight,
+        'Manhã fresca. Comece com peças leves e camadas fáceis de tirar.'
+      );
+    }
+    if (hour < 18) {
+      return (
+        Icons.wb_sunny_outlined,
+        'Tarde em cheio. Que tal apostar em sobreposições e um tom de destaque?'
+      );
+    }
+    return (
+      Icons.nightlight_outlined,
+      'Noite chegando. Vá de peças mais sóbrias e um acessório marcante.'
+    );
+  }
+}
+
+// ─── Métricas do Closet ───────────────────────────────────────────────────────
+
+class _ClosetMetrics extends ConsumerWidget {
+  const _ClosetMetrics();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(totalClothingItemsProvider);
+    final outfits = ref.watch(totalOutfitsProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 2),
+            child: Text(
+              'MÉTRICAS DO SEU CLOSET',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _MetricCell(
+                      value: items,
+                      label: 'Peças catalogadas',
+                      icon: Icons.checkroom,
+                    ),
+                  ),
+                  VerticalDivider(width: 1, color: scheme.outlineVariant),
+                  Expanded(
+                    child: _MetricCell(
+                      value: outfits,
+                      label: 'Looks montados',
+                      icon: Icons.style,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricCell extends StatelessWidget {
+  final AsyncValue<int> value;
+  final String label;
+  final IconData icon;
+
+  const _MetricCell({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      child: Column(
+        children: [
+          Icon(icon, size: 22, color: scheme.primary),
+          const SizedBox(height: 8),
+          value.when(
+            data: (v) => Text(
+              '$v',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            loading: () => const SizedBox(
+              height: 26,
+              width: 26,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, _) => const Text('--', style: TextStyle(fontSize: 26)),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -218,62 +410,33 @@ class _RecentOutfitsCarouselState
 
 // ─── Cards ──────────────────────────────────────────────────────────────────
 
-class _ItemCard extends StatelessWidget {
+class _ItemCard extends ConsumerWidget {
   final ClothingItem item;
   const _ItemCard({required this.item});
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Card(
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 110,
-              child: ExtendedImage.file(
-                File(item.imagePath),
-                fit: BoxFit.cover,
-                height: double.infinity,
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 15),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        item.category,
-                        style: TextStyle(
-                            fontSize: 12, color: colorScheme.onPrimaryContainer),
-                      ),
-                    ),
-                  ],
+      child: GestureDetector(
+        onTap: () =>
+            ref.read(currentTabIndexProvider.notifier).setTab(1),
+        child: Card(
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: ExtendedImage.file(
+                    File(item.imagePath),
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                  ),
                 ),
               ),
-            ),
-          ],
+              _CardNameStrip(name: item.name),
+            ],
+          ),
         ),
       ),
     );
@@ -287,66 +450,69 @@ class _OutfitCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(clothingItemsForOutfitProvider(outfit.id));
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Card(
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          children: [
-            Expanded(
-              child: itemsAsync.when(
-                data: (items) {
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Icon(Icons.style_outlined,
-                          size: 48, color: Colors.grey.shade400),
-                    );
-                  }
-                  return LayoutBuilder(
-                    builder: (ctx, constraints) {
-                      final sorted = _sortAnatomically(items);
-                      final visible = sorted.take(3).toList();
-                      final slotH = constraints.maxHeight / visible.length;
-                      return Column(
+      child: GestureDetector(
+        onTap: () =>
+            ref.read(currentTabIndexProvider.notifier).setTab(1),
+        child: Card(
+          child: Column(
+            children: [
+              Expanded(
+                child: itemsAsync.when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return Icon(Icons.style_outlined,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant);
+                    }
+                    final visible = _sortAnatomically(items).take(3).toList();
+                    return Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
                         children: visible
                             .map(
-                              (it) => SizedBox(
-                                width: constraints.maxWidth,
-                                height: slotH,
+                              (it) => Expanded(
                                 child: ExtendedImage.file(
                                   File(it.imagePath),
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                             )
                             .toList(),
-                      );
-                    },
-                  );
-                },
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, st) => const SizedBox.shrink(),
+                      ),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, st) => const SizedBox.shrink(),
+                ),
               ),
-            ),
-            Container(
-              width: double.infinity,
-              color: colorScheme.surfaceContainerHighest,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Text(
-                outfit.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+              _CardNameStrip(name: outfit.name),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _CardNameStrip extends StatelessWidget {
+  final String name;
+  const _CardNameStrip({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Text(
+        name,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -359,24 +525,20 @@ class _EmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade300),
-        ),
-        elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Icon(icon, size: 40, color: Colors.grey.shade400),
+              Icon(icon, size: 40, color: scheme.onSurfaceVariant),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   message,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
                 ),
               ),
             ],
