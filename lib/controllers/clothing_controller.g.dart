@@ -186,7 +186,7 @@ class _ClothingByCategoryProviderElement
 }
 
 String _$clothingControllerHash() =>
-    r'aad773d3548d42749327eab97aaa07bb3f01f749';
+    r'c6b68228c66c5ee97e24d0d2176814cecec7aa58';
 
 /// See also [ClothingController].
 @ProviderFor(ClothingController)

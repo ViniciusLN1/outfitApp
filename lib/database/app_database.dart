@@ -6,12 +6,20 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/clothing_item.dart';
+import '../models/item_transform.dart';
 import '../models/outfit.dart';
 import '../models/outfit_item.dart';
 import 'daos/clothing_dao.dart';
 import 'daos/outfit_dao.dart';
 
 part 'app_database.g.dart';
+
+/// Peça de um look já resolvida com seu posicionamento normalizado.
+class OutfitPlacement {
+  final ClothingItem item;
+  final ItemTransform transform;
+  const OutfitPlacement({required this.item, required this.transform});
+}
 
 @DriftDatabase(
   tables: [ClothingItems, Outfits, OutfitItems],
@@ -20,8 +28,10 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.forTesting(super.e);
+
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -32,6 +42,25 @@ class AppDatabase extends _$AppDatabase {
               "WHERE category = 'complemento'",
             );
           }
+          if (from < 3) {
+            await m.addColumn(outfitItems, outfitItems.centerX);
+            await m.addColumn(outfitItems, outfitItems.centerY);
+            await m.addColumn(outfitItems, outfitItems.itemSize);
+            await m.addColumn(outfitItems, outfitItems.zIndex);
+          }
+          if (from < 4) {
+            await m.createIndex(idxOutfitItemsItemId);
+            await m.createIndex(idxOutfitsDateCreated);
+            await m.createIndex(idxOutfitsFavoriteDate);
+            await m.createIndex(idxOutfitsUsageDate);
+            await m.createIndex(idxClothingItemsCategory);
+            await m.createIndex(idxClothingItemsDateAdded);
+          }
+        },
+        beforeOpen: (details) async {
+          // SQLite exige este pragma por conexão; sem ele o ON DELETE CASCADE
+          // declarado nas tabelas é ignorado.
+          await customStatement('PRAGMA foreign_keys = ON');
         },
       );
 
@@ -42,6 +71,31 @@ class AppDatabase extends _$AppDatabase {
       ..where(outfitItems.outfitId.equals(outfitId));
     return query.watch().map(
           (rows) => rows.map((r) => r.readTable(clothingItems)).toList(),
+        );
+  }
+
+  /// Peças de um look com o posicionamento salvo (ordenadas por z).
+  /// Looks legados (itemSize == 0) recebem o layout anatômico padrão.
+  Stream<List<OutfitPlacement>> watchOutfitPlacements(String outfitId) {
+    final query = select(clothingItems).join([
+      innerJoin(outfitItems, outfitItems.itemId.equalsExp(clothingItems.id)),
+    ])
+      ..where(outfitItems.outfitId.equals(outfitId))
+      ..orderBy([OrderingTerm.asc(outfitItems.zIndex)]);
+    return query.watch().map(
+          (rows) => rows.map((r) {
+            final item = r.readTable(clothingItems);
+            final oi = r.readTable(outfitItems);
+            final transform = oi.itemSize > 0
+                ? ItemTransform(
+                    centerX: oi.centerX,
+                    centerY: oi.centerY,
+                    size: oi.itemSize,
+                    z: oi.zIndex,
+                  )
+                : defaultTransformFor(item.category);
+            return OutfitPlacement(item: item, transform: transform);
+          }).toList(),
         );
   }
 }

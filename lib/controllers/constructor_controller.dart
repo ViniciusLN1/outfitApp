@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../database/app_database.dart';
+import '../models/item_transform.dart';
 import 'clothing_controller.dart';
 
 part 'constructor_controller.g.dart';
@@ -27,45 +28,68 @@ extension ClothingCategoryLabel on ClothingCategory {
       };
 }
 
-typedef CanvasState = Map<ClothingCategory, ClothingItem?>;
+/// Estado do construtor: peça escolhida por categoria + seu layout normalizado.
+class ConstructorState {
+  final Map<ClothingCategory, ClothingItem?> items;
+  final Map<ClothingCategory, ItemTransform> transforms;
+
+  const ConstructorState({required this.items, required this.transforms});
+
+  /// Categorias que possuem peça alocada.
+  Iterable<ClothingCategory> get occupied =>
+      items.entries.where((e) => e.value != null).map((e) => e.key);
+
+  ConstructorState copyWith({
+    Map<ClothingCategory, ClothingItem?>? items,
+    Map<ClothingCategory, ItemTransform>? transforms,
+  }) =>
+      ConstructorState(
+        items: items ?? this.items,
+        transforms: transforms ?? this.transforms,
+      );
+}
 
 @riverpod
 class ConstructorController extends _$ConstructorController {
   @override
-  CanvasState build() => {
-        ClothingCategory.chapeu: null,
-        ClothingCategory.camisa: null,
-        ClothingCategory.blusa: null,
-        ClothingCategory.cinto: null,
-        ClothingCategory.calca: null,
-        ClothingCategory.sapato: null,
-        ClothingCategory.acessorios: null,
-      };
+  ConstructorState build() => ConstructorState(
+        items: {for (final c in ClothingCategory.values) c: null},
+        transforms: {
+          for (final c in ClothingCategory.values) c: defaultTransformFor(c.name)
+        },
+      );
 
   void selectItem(ClothingCategory category, ClothingItem? item) {
-    state = {...state, category: item};
+    state = state.copyWith(items: {...state.items, category: item});
   }
 
   void clearCategory(ClothingCategory category) {
-    state = {...state, category: null};
+    state = state.copyWith(items: {...state.items, category: null});
   }
 
   void clearAll() {
     state = build();
   }
 
+  /// Aplica o arranjo definido no editor de ajuste.
+  void setTransforms(Map<ClothingCategory, ItemTransform> transforms) {
+    state = state.copyWith(transforms: {...state.transforms, ...transforms});
+  }
+
   Future<void> loadOutfit(String outfitId) async {
     final db = ref.read(appDatabaseProvider);
-    final outfitItems = await db.outfitDao.getItemsForOutfit(outfitId);
-    final itemIds = outfitItems.map((e) => e.itemId).toList();
-    final allItems = await db.clothingDao.watchAll().first;
-    final relevant = {
-      for (final item in allItems.where((i) => itemIds.contains(i.id)))
-        ClothingCategory.values.firstWhere(
-          (c) => c.name == item.category,
-          orElse: () => ClothingCategory.acessorios,
-        ): item,
-    };
-    state = {...build(), ...relevant};
+    final placements = await db.watchOutfitPlacements(outfitId).first;
+    final fresh = build();
+    final items = {...fresh.items};
+    final transforms = {...fresh.transforms};
+    for (final p in placements) {
+      final category = ClothingCategory.values.firstWhere(
+        (c) => c.name == p.item.category,
+        orElse: () => ClothingCategory.acessorios,
+      );
+      items[category] = p.item;
+      transforms[category] = p.transform;
+    }
+    state = ConstructorState(items: items, transforms: transforms);
   }
 }

@@ -112,3 +112,40 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 - **Do not** refactor unrelated files. Focus strictly on the requested scope.
 - **Always** run relevant tests before declaring a task finished.
 - If a compilation or test error occurs, analyze the stack trace completely before changing code.
+
+# Claude Project Knowledge & Rules
+
+## Project Overview
+- **App Name:** OutfitApp (Digital Wardrobe & Outfit Planner)
+- **Stack:** Flutter 3.44+ / Dart ^3.12 (Material 3, Impeller)
+- **State Management:** Riverpod with Code Generation (`@riverpod`, `riverpod_annotation`)
+- **Database:** Local SQLite via Drift (Reactive with Streams), schemaVersion = 2
+- **Backend Service:** Python + FastAPI + rembg (U²-Net/ONNX) for background removal via HTTP bytes.
+
+---
+
+## Architectural Guidelines
+- **Pattern:** MVC-ish (views/ -> controllers/ -> database/ & services/)
+- **State & Data Flow:** UI must consume data via reactive Streams exposed by Drift DAOs. State modifications must trigger automatic UI updates through Riverpod providers.
+- **Navigation:** Controlled strictly via `nav_controller` using an `IndexedStack` + `NavigationBar` (5 tabs).
+
+---
+
+## Technical Code Rules
+- **Riverpod Syntax:** NEVER write legacy manual providers. ALWAYS use the modern code generation syntax with `@riverpod` annotations.
+- **Asynchronous Code & I/O:** All HTTP calls, camera operations, and file storage (`image_storage_service.dart`) MUST be wrapped in `try-catch` blocks. Handle errors gracefully by propagating failure states to the UI; never let the app crash due to network/IO failures.
+- **Scope Creep Guard:** Do not refactor or modify files outside the explicit prompt scope unless strictly required to fix compilation errors. 
+
+---
+
+## Design System (Editorial & Minimalist Aesthetic)
+- **Geometry:** Strict semi-sharp corners. Apply `BorderRadius.circular(4)` to all cards, buttons, inputs, and containers. Modals/bottom sheets use `BorderRadius.circular(6)`. Never use highly rounded or circular corners unless it is for avatars.
+- **Effects:** No artificial effects. Set `elevation: 0` globally. Do NOT use gradients or diffuse drop shadows. 
+- **Contrast & Styling:** Contrast must be achieved via fine borders (`outlineVariant`), font weights, and solid colors. Use explicit `letterSpacing` on titles and labels to maintain the editorial print look.
+- **Palette:** Deep Dark Blue (`#14213D`), Pure White, and Dark Background (`#0B1426`). Shared uniform layout language across Light/Dark modes via `_buildTheme(brightness)` in `app.dart`.
+
+---
+
+## Output Restrictions (Token Efficiency)
+- **Minimalist Diffs:** When modifying code, output ONLY the modified code lines or specific file diffs. Never rewrite a whole file if only minor lines changed.
+- **No Fluff:** Do not provide verbose text explanations, introductions, or conversational filler after generating code blocks. Go straight to execution. 

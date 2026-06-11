@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
@@ -11,6 +9,8 @@ import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
+import '../../widgets/outfit_layout_preview.dart';
+import 'outfit_adjust_view.dart';
 
 class ConstructorView extends ConsumerStatefulWidget {
   const ConstructorView({super.key});
@@ -20,9 +20,19 @@ class ConstructorView extends ConsumerStatefulWidget {
 }
 
 class _ConstructorViewState extends ConsumerState<ConstructorView> {
-  final _repaintKey = GlobalKey();
+  void _openAdjust(ConstructorState canvas) {
+    if (canvas.occupied.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adicione peças antes de ajustar.')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const OutfitAdjustView()),
+    );
+  }
 
-  Future<void> _showSaveDialog(CanvasState canvas) async {
+  Future<void> _showSaveDialog(ConstructorState canvas) async {
     final nameController = TextEditingController();
     await showDialog<void>(
       context: context,
@@ -47,20 +57,24 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
               if (name.isEmpty) return;
               Navigator.pop(ctx);
 
-              final itemIds = canvas.values
-                  .whereType<ClothingItem>()
-                  .map((i) => i.id)
-                  .toList();
+              final placements = <OutfitItemPlacement>[
+                for (final entry in canvas.items.entries)
+                  if (entry.value != null)
+                    (
+                      itemId: entry.value!.id,
+                      transform: canvas.transforms[entry.key]!,
+                    ),
+              ];
 
               await ref
                   .read(outfitControllerProvider.notifier)
-                  .saveOutfit(name: name, itemIds: itemIds);
+                  .saveOutfit(name: name, placements: placements);
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Outfit salvo!')),
                 );
-                await _askExportToGallery();
+                await _askExportToGallery(canvas);
               }
 
               ref.read(constructorControllerProvider.notifier).clearAll();
@@ -72,7 +86,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
     );
   }
 
-  Future<void> _askExportToGallery() async {
+  Future<void> _askExportToGallery(ConstructorState canvas) async {
     if (!mounted) return;
     final export = await showDialog<bool>(
       context: context,
@@ -96,17 +110,17 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
     if (export != true || !mounted) return;
 
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
-      if (boundary == null) return;
+      final placements = <OutfitPlacement>[
+        for (final entry in canvas.items.entries)
+          if (entry.value != null)
+            OutfitPlacement(
+              item: entry.value!,
+              transform: canvas.transforms[entry.key]!,
+            ),
+      ];
 
-      final image = await boundary.toImage(
-        pixelRatio: MediaQuery.of(context).devicePixelRatio,
-      );
-      final byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      final pngBytes = byteData.buffer.asUint8List();
+      final pngBytes = await renderOutfitPng(placements);
+      if (pngBytes == null) return;
 
       final hasAccess = await Gal.hasAccess(toAlbum: true);
       if (!hasAccess) await Gal.requestAccess(toAlbum: true);
@@ -148,22 +162,28 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: RepaintBoundary(
-                key: _repaintKey,
-                child: _buildCanvas(canvas),
-              ),
+              child: _buildCanvas(canvas),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Center(
-              child: SizedBox(
-                width: 200,
-                child: ElevatedButton(
-                  onPressed: () => _showSaveDialog(canvas),
-                  child: const Text('Salvar Outfit'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _openAdjust(canvas),
+                  icon: const Icon(Icons.tune, size: 18),
+                  label: const Text('Ajustar'),
                 ),
-              ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 170,
+                  child: ElevatedButton(
+                    onPressed: () => _showSaveDialog(canvas),
+                    child: const Text('Salvar Outfit'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -171,7 +191,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
     );
   }
 
-  Widget _buildCanvas(CanvasState canvas) {
+  Widget _buildCanvas(ConstructorState canvas) {
     // Eixo central vertical e simétrico: chapéu, camisa, cinto, calça, sapato.
     // Acessórios à esquerda da camisa; Blusa/Jaqueta à direita.
     return Column(
@@ -182,7 +202,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
             width: 150,
             child: _Slot(
               category: ClothingCategory.chapeu,
-              item: canvas[ClothingCategory.chapeu],
+              item: canvas.items[ClothingCategory.chapeu],
               height: 72,
             ),
           ),
@@ -195,7 +215,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
               flex: 3,
               child: _Slot(
                 category: ClothingCategory.acessorios,
-                item: canvas[ClothingCategory.acessorios],
+                item: canvas.items[ClothingCategory.acessorios],
                 height: 96,
               ),
             ),
@@ -204,7 +224,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
               flex: 4,
               child: _Slot(
                 category: ClothingCategory.camisa,
-                item: canvas[ClothingCategory.camisa],
+                item: canvas.items[ClothingCategory.camisa],
                 height: 144,
               ),
             ),
@@ -213,7 +233,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
               flex: 3,
               child: _Slot(
                 category: ClothingCategory.blusa,
-                item: canvas[ClothingCategory.blusa],
+                item: canvas.items[ClothingCategory.blusa],
                 height: 96,
               ),
             ),
@@ -225,7 +245,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
             width: 200,
             child: _Slot(
               category: ClothingCategory.cinto,
-              item: canvas[ClothingCategory.cinto],
+              item: canvas.items[ClothingCategory.cinto],
               height: 54,
             ),
           ),
@@ -236,7 +256,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
             width: 190,
             child: _Slot(
               category: ClothingCategory.calca,
-              item: canvas[ClothingCategory.calca],
+              item: canvas.items[ClothingCategory.calca],
               height: 150,
             ),
           ),
@@ -247,7 +267,7 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
             width: 150,
             child: _Slot(
               category: ClothingCategory.sapato,
-              item: canvas[ClothingCategory.sapato],
+              item: canvas.items[ClothingCategory.sapato],
               height: 78,
             ),
           ),
@@ -311,33 +331,42 @@ class _EmptySlot extends StatelessWidget {
   final ClothingCategory category;
   const _EmptySlot({required this.category});
 
-  // Ícone semântico por categoria (Material não possui glifos próprios de
-  // calça/sapato/cinto/chapéu — usamos o mais próximo de cada peça).
-  static const _iconMap = {
-    ClothingCategory.chapeu: Icons.sports_baseball, // boné
-    ClothingCategory.camisa: Icons.checkroom, // camisa no cabide
-    ClothingCategory.blusa: Icons.dry_cleaning, // jaqueta/blusa
-    ClothingCategory.cinto: Icons.horizontal_rule, // cinto
-    ClothingCategory.calca: Icons.accessibility_new, // calça (silhueta)
-    ClothingCategory.sapato: Icons.directions_walk, // sapato
-    ClothingCategory.acessorios: Icons.watch, // acessórios
+  // Glifo semântico por categoria. Material Icons não tem peças de roupa
+  // específicas, então usamos emoji (universal e consistente) para as peças e
+  // reservamos um ícone Material apenas para o cinto, que não tem emoji.
+  static const _emojiMap = {
+    ClothingCategory.chapeu: '🧢',
+    ClothingCategory.camisa: '👕',
+    ClothingCategory.blusa: '🧥',
+    ClothingCategory.calca: '👖',
+    ClothingCategory.sapato: '👞',
+    ClothingCategory.acessorios: '⌚',
   };
+  static const _fallbackIcon = Icons.horizontal_rule; // cinto
 
   @override
   Widget build(BuildContext context) {
-    final icon = _iconMap[category] ?? Icons.add_circle_outline;
+    final emoji = _emojiMap[category];
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Stack(
       alignment: Alignment.center,
       children: [
-        Icon(icon, size: 56, color: muted.withValues(alpha: 0.12)),
+        emoji != null
+            ? Opacity(
+                opacity: 0.12,
+                child: Text(emoji, style: const TextStyle(fontSize: 50)),
+              )
+            : Icon(_fallbackIcon, size: 56, color: muted.withValues(alpha: 0.12)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 26, color: muted.withValues(alpha: 0.7)),
+              emoji != null
+                  ? Text(emoji, style: const TextStyle(fontSize: 24))
+                  : Icon(_fallbackIcon, size: 26,
+                      color: muted.withValues(alpha: 0.7)),
               const SizedBox(height: 4),
               Text(
                 category.displayName,

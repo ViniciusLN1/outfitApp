@@ -20,12 +20,18 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
 
   Stream<List<Outfit>> watchFavoritesFirst() =>
       (select(outfits)
-            ..orderBy([(t) => OrderingTerm.desc(t.isFavorite)]))
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.isFavorite),
+              (t) => OrderingTerm.desc(t.dateCreated),
+            ]))
           .watch();
 
   Stream<List<Outfit>> watchMostUsed() =>
       (select(outfits)
-            ..orderBy([(t) => OrderingTerm.desc(t.usageCount)]))
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.usageCount),
+              (t) => OrderingTerm.desc(t.dateCreated),
+            ]))
           .watch();
 
   Future<List<OutfitItem>> getItemsForOutfit(String outfitId) =>
@@ -48,10 +54,10 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
       (update(outfits)..where((t) => t.id.equals(id)))
           .write(OutfitsCompanion(name: Value(name)));
 
-  Future<void> incrementUsage(String id) async {
-    final outfit =
-        await (select(outfits)..where((t) => t.id.equals(id))).getSingle();
-    await (update(outfits)..where((t) => t.id.equals(id)))
-        .write(OutfitsCompanion(usageCount: Value(outfit.usageCount + 1)));
-  }
+  Future<void> incrementUsage(String id) =>
+      (update(outfits)..where((t) => t.id.equals(id))).write(
+        OutfitsCompanion.custom(
+          usageCount: outfits.usageCount + const Constant(1),
+        ),
+      );
 }

@@ -3,9 +3,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../models/item_transform.dart';
 import 'clothing_controller.dart';
 
 part 'outfit_controller.g.dart';
+
+/// Peça + posicionamento a ser persistido junto ao look.
+typedef OutfitItemPlacement = ({String itemId, ItemTransform transform});
 
 enum OutfitSortMode { favoritesFirst, mostUsed }
 
@@ -41,7 +45,7 @@ class OutfitController extends _$OutfitController {
 
   Future<String> saveOutfit({
     required String name,
-    required List<String> itemIds,
+    required List<OutfitItemPlacement> placements,
     String? existingId,
   }) async {
     final db = ref.read(appDatabaseProvider);
@@ -51,10 +55,14 @@ class OutfitController extends _$OutfitController {
       name: Value(name),
       dateCreated: Value(DateTime.now().millisecondsSinceEpoch),
     ));
-    for (final itemId in itemIds) {
+    for (final p in placements) {
       await db.outfitDao.insertOutfitItem(OutfitItemsCompanion(
         outfitId: Value(id),
-        itemId: Value(itemId),
+        itemId: Value(p.itemId),
+        centerX: Value(p.transform.centerX),
+        centerY: Value(p.transform.centerY),
+        itemSize: Value(p.transform.size),
+        zIndex: Value(p.transform.z),
       ));
     }
     return id;

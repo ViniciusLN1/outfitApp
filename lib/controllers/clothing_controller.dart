@@ -30,6 +30,11 @@ final clothingItemsForOutfitProvider =
   return ref.watch(appDatabaseProvider).watchClothingItemsForOutfit(outfitId);
 });
 
+final outfitPlacementsProvider =
+    StreamProvider.family<List<OutfitPlacement>, String>((ref, outfitId) {
+  return ref.watch(appDatabaseProvider).watchOutfitPlacements(outfitId);
+});
+
 @riverpod
 class ClothingController extends _$ClothingController {
   @override

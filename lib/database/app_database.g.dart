@@ -760,8 +760,61 @@ class $OutfitItemsTable extends OutfitItems
       'REFERENCES clothing_items (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _centerXMeta = const VerificationMeta(
+    'centerX',
+  );
   @override
-  List<GeneratedColumn> get $columns => [outfitId, itemId];
+  late final GeneratedColumn<double> centerX = GeneratedColumn<double>(
+    'center_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.5),
+  );
+  static const VerificationMeta _centerYMeta = const VerificationMeta(
+    'centerY',
+  );
+  @override
+  late final GeneratedColumn<double> centerY = GeneratedColumn<double>(
+    'center_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.5),
+  );
+  static const VerificationMeta _itemSizeMeta = const VerificationMeta(
+    'itemSize',
+  );
+  @override
+  late final GeneratedColumn<double> itemSize = GeneratedColumn<double>(
+    'item_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _zIndexMeta = const VerificationMeta('zIndex');
+  @override
+  late final GeneratedColumn<int> zIndex = GeneratedColumn<int>(
+    'z_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    outfitId,
+    itemId,
+    centerX,
+    centerY,
+    itemSize,
+    zIndex,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -790,6 +843,30 @@ class $OutfitItemsTable extends OutfitItems
     } else if (isInserting) {
       context.missing(_itemIdMeta);
     }
+    if (data.containsKey('center_x')) {
+      context.handle(
+        _centerXMeta,
+        centerX.isAcceptableOrUnknown(data['center_x']!, _centerXMeta),
+      );
+    }
+    if (data.containsKey('center_y')) {
+      context.handle(
+        _centerYMeta,
+        centerY.isAcceptableOrUnknown(data['center_y']!, _centerYMeta),
+      );
+    }
+    if (data.containsKey('item_size')) {
+      context.handle(
+        _itemSizeMeta,
+        itemSize.isAcceptableOrUnknown(data['item_size']!, _itemSizeMeta),
+      );
+    }
+    if (data.containsKey('z_index')) {
+      context.handle(
+        _zIndexMeta,
+        zIndex.isAcceptableOrUnknown(data['z_index']!, _zIndexMeta),
+      );
+    }
     return context;
   }
 
@@ -807,6 +884,22 @@ class $OutfitItemsTable extends OutfitItems
         DriftSqlType.string,
         data['${effectivePrefix}item_id'],
       )!,
+      centerX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}center_x'],
+      )!,
+      centerY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}center_y'],
+      )!,
+      itemSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}item_size'],
+      )!,
+      zIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}z_index'],
+      )!,
     );
   }
 
@@ -819,12 +912,27 @@ class $OutfitItemsTable extends OutfitItems
 class OutfitItem extends DataClass implements Insertable<OutfitItem> {
   final String outfitId;
   final String itemId;
-  const OutfitItem({required this.outfitId, required this.itemId});
+  final double centerX;
+  final double centerY;
+  final double itemSize;
+  final int zIndex;
+  const OutfitItem({
+    required this.outfitId,
+    required this.itemId,
+    required this.centerX,
+    required this.centerY,
+    required this.itemSize,
+    required this.zIndex,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['outfit_id'] = Variable<String>(outfitId);
     map['item_id'] = Variable<String>(itemId);
+    map['center_x'] = Variable<double>(centerX);
+    map['center_y'] = Variable<double>(centerY);
+    map['item_size'] = Variable<double>(itemSize);
+    map['z_index'] = Variable<int>(zIndex);
     return map;
   }
 
@@ -832,6 +940,10 @@ class OutfitItem extends DataClass implements Insertable<OutfitItem> {
     return OutfitItemsCompanion(
       outfitId: Value(outfitId),
       itemId: Value(itemId),
+      centerX: Value(centerX),
+      centerY: Value(centerY),
+      itemSize: Value(itemSize),
+      zIndex: Value(zIndex),
     );
   }
 
@@ -843,6 +955,10 @@ class OutfitItem extends DataClass implements Insertable<OutfitItem> {
     return OutfitItem(
       outfitId: serializer.fromJson<String>(json['outfitId']),
       itemId: serializer.fromJson<String>(json['itemId']),
+      centerX: serializer.fromJson<double>(json['centerX']),
+      centerY: serializer.fromJson<double>(json['centerY']),
+      itemSize: serializer.fromJson<double>(json['itemSize']),
+      zIndex: serializer.fromJson<int>(json['zIndex']),
     );
   }
   @override
@@ -851,17 +967,36 @@ class OutfitItem extends DataClass implements Insertable<OutfitItem> {
     return <String, dynamic>{
       'outfitId': serializer.toJson<String>(outfitId),
       'itemId': serializer.toJson<String>(itemId),
+      'centerX': serializer.toJson<double>(centerX),
+      'centerY': serializer.toJson<double>(centerY),
+      'itemSize': serializer.toJson<double>(itemSize),
+      'zIndex': serializer.toJson<int>(zIndex),
     };
   }
 
-  OutfitItem copyWith({String? outfitId, String? itemId}) => OutfitItem(
+  OutfitItem copyWith({
+    String? outfitId,
+    String? itemId,
+    double? centerX,
+    double? centerY,
+    double? itemSize,
+    int? zIndex,
+  }) => OutfitItem(
     outfitId: outfitId ?? this.outfitId,
     itemId: itemId ?? this.itemId,
+    centerX: centerX ?? this.centerX,
+    centerY: centerY ?? this.centerY,
+    itemSize: itemSize ?? this.itemSize,
+    zIndex: zIndex ?? this.zIndex,
   );
   OutfitItem copyWithCompanion(OutfitItemsCompanion data) {
     return OutfitItem(
       outfitId: data.outfitId.present ? data.outfitId.value : this.outfitId,
       itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      centerX: data.centerX.present ? data.centerX.value : this.centerX,
+      centerY: data.centerY.present ? data.centerY.value : this.centerY,
+      itemSize: data.itemSize.present ? data.itemSize.value : this.itemSize,
+      zIndex: data.zIndex.present ? data.zIndex.value : this.zIndex,
     );
   }
 
@@ -869,44 +1004,73 @@ class OutfitItem extends DataClass implements Insertable<OutfitItem> {
   String toString() {
     return (StringBuffer('OutfitItem(')
           ..write('outfitId: $outfitId, ')
-          ..write('itemId: $itemId')
+          ..write('itemId: $itemId, ')
+          ..write('centerX: $centerX, ')
+          ..write('centerY: $centerY, ')
+          ..write('itemSize: $itemSize, ')
+          ..write('zIndex: $zIndex')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(outfitId, itemId);
+  int get hashCode =>
+      Object.hash(outfitId, itemId, centerX, centerY, itemSize, zIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is OutfitItem &&
           other.outfitId == this.outfitId &&
-          other.itemId == this.itemId);
+          other.itemId == this.itemId &&
+          other.centerX == this.centerX &&
+          other.centerY == this.centerY &&
+          other.itemSize == this.itemSize &&
+          other.zIndex == this.zIndex);
 }
 
 class OutfitItemsCompanion extends UpdateCompanion<OutfitItem> {
   final Value<String> outfitId;
   final Value<String> itemId;
+  final Value<double> centerX;
+  final Value<double> centerY;
+  final Value<double> itemSize;
+  final Value<int> zIndex;
   final Value<int> rowid;
   const OutfitItemsCompanion({
     this.outfitId = const Value.absent(),
     this.itemId = const Value.absent(),
+    this.centerX = const Value.absent(),
+    this.centerY = const Value.absent(),
+    this.itemSize = const Value.absent(),
+    this.zIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutfitItemsCompanion.insert({
     required String outfitId,
     required String itemId,
+    this.centerX = const Value.absent(),
+    this.centerY = const Value.absent(),
+    this.itemSize = const Value.absent(),
+    this.zIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : outfitId = Value(outfitId),
        itemId = Value(itemId);
   static Insertable<OutfitItem> custom({
     Expression<String>? outfitId,
     Expression<String>? itemId,
+    Expression<double>? centerX,
+    Expression<double>? centerY,
+    Expression<double>? itemSize,
+    Expression<int>? zIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (outfitId != null) 'outfit_id': outfitId,
       if (itemId != null) 'item_id': itemId,
+      if (centerX != null) 'center_x': centerX,
+      if (centerY != null) 'center_y': centerY,
+      if (itemSize != null) 'item_size': itemSize,
+      if (zIndex != null) 'z_index': zIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -914,11 +1078,19 @@ class OutfitItemsCompanion extends UpdateCompanion<OutfitItem> {
   OutfitItemsCompanion copyWith({
     Value<String>? outfitId,
     Value<String>? itemId,
+    Value<double>? centerX,
+    Value<double>? centerY,
+    Value<double>? itemSize,
+    Value<int>? zIndex,
     Value<int>? rowid,
   }) {
     return OutfitItemsCompanion(
       outfitId: outfitId ?? this.outfitId,
       itemId: itemId ?? this.itemId,
+      centerX: centerX ?? this.centerX,
+      centerY: centerY ?? this.centerY,
+      itemSize: itemSize ?? this.itemSize,
+      zIndex: zIndex ?? this.zIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -932,6 +1104,18 @@ class OutfitItemsCompanion extends UpdateCompanion<OutfitItem> {
     if (itemId.present) {
       map['item_id'] = Variable<String>(itemId.value);
     }
+    if (centerX.present) {
+      map['center_x'] = Variable<double>(centerX.value);
+    }
+    if (centerY.present) {
+      map['center_y'] = Variable<double>(centerY.value);
+    }
+    if (itemSize.present) {
+      map['item_size'] = Variable<double>(itemSize.value);
+    }
+    if (zIndex.present) {
+      map['z_index'] = Variable<int>(zIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -943,6 +1127,10 @@ class OutfitItemsCompanion extends UpdateCompanion<OutfitItem> {
     return (StringBuffer('OutfitItemsCompanion(')
           ..write('outfitId: $outfitId, ')
           ..write('itemId: $itemId, ')
+          ..write('centerX: $centerX, ')
+          ..write('centerY: $centerY, ')
+          ..write('itemSize: $itemSize, ')
+          ..write('zIndex: $zIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -955,6 +1143,30 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ClothingItemsTable clothingItems = $ClothingItemsTable(this);
   late final $OutfitsTable outfits = $OutfitsTable(this);
   late final $OutfitItemsTable outfitItems = $OutfitItemsTable(this);
+  late final Index idxClothingItemsCategory = Index(
+    'idx_clothing_items_category',
+    'CREATE INDEX idx_clothing_items_category ON clothing_items (category)',
+  );
+  late final Index idxClothingItemsDateAdded = Index(
+    'idx_clothing_items_date_added',
+    'CREATE INDEX idx_clothing_items_date_added ON clothing_items (date_added)',
+  );
+  late final Index idxOutfitsDateCreated = Index(
+    'idx_outfits_date_created',
+    'CREATE INDEX idx_outfits_date_created ON outfits (date_created)',
+  );
+  late final Index idxOutfitsFavoriteDate = Index(
+    'idx_outfits_favorite_date',
+    'CREATE INDEX idx_outfits_favorite_date ON outfits (is_favorite, date_created)',
+  );
+  late final Index idxOutfitsUsageDate = Index(
+    'idx_outfits_usage_date',
+    'CREATE INDEX idx_outfits_usage_date ON outfits (usage_count, date_created)',
+  );
+  late final Index idxOutfitItemsItemId = Index(
+    'idx_outfit_items_item_id',
+    'CREATE INDEX idx_outfit_items_item_id ON outfit_items (item_id)',
+  );
   late final ClothingDao clothingDao = ClothingDao(this as AppDatabase);
   late final OutfitDao outfitDao = OutfitDao(this as AppDatabase);
   @override
@@ -965,6 +1177,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clothingItems,
     outfits,
     outfitItems,
+    idxClothingItemsCategory,
+    idxClothingItemsDateAdded,
+    idxOutfitsDateCreated,
+    idxOutfitsFavoriteDate,
+    idxOutfitsUsageDate,
+    idxOutfitItemsItemId,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1600,12 +1818,20 @@ typedef $$OutfitItemsTableCreateCompanionBuilder =
     OutfitItemsCompanion Function({
       required String outfitId,
       required String itemId,
+      Value<double> centerX,
+      Value<double> centerY,
+      Value<double> itemSize,
+      Value<int> zIndex,
       Value<int> rowid,
     });
 typedef $$OutfitItemsTableUpdateCompanionBuilder =
     OutfitItemsCompanion Function({
       Value<String> outfitId,
       Value<String> itemId,
+      Value<double> centerX,
+      Value<double> centerY,
+      Value<double> itemSize,
+      Value<int> zIndex,
       Value<int> rowid,
     });
 
@@ -1661,6 +1887,26 @@ class $$OutfitItemsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<double> get centerX => $composableBuilder(
+    column: $table.centerX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get centerY => $composableBuilder(
+    column: $table.centerY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get itemSize => $composableBuilder(
+    column: $table.itemSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get zIndex => $composableBuilder(
+    column: $table.zIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$OutfitsTableFilterComposer get outfitId {
     final $$OutfitsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -1717,6 +1963,26 @@ class $$OutfitItemsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<double> get centerX => $composableBuilder(
+    column: $table.centerX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get centerY => $composableBuilder(
+    column: $table.centerY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get itemSize => $composableBuilder(
+    column: $table.itemSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get zIndex => $composableBuilder(
+    column: $table.zIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$OutfitsTableOrderingComposer get outfitId {
     final $$OutfitsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1773,6 +2039,18 @@ class $$OutfitItemsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<double> get centerX =>
+      $composableBuilder(column: $table.centerX, builder: (column) => column);
+
+  GeneratedColumn<double> get centerY =>
+      $composableBuilder(column: $table.centerY, builder: (column) => column);
+
+  GeneratedColumn<double> get itemSize =>
+      $composableBuilder(column: $table.itemSize, builder: (column) => column);
+
+  GeneratedColumn<int> get zIndex =>
+      $composableBuilder(column: $table.zIndex, builder: (column) => column);
+
   $$OutfitsTableAnnotationComposer get outfitId {
     final $$OutfitsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -1850,20 +2128,36 @@ class $$OutfitItemsTableTableManager
               ({
                 Value<String> outfitId = const Value.absent(),
                 Value<String> itemId = const Value.absent(),
+                Value<double> centerX = const Value.absent(),
+                Value<double> centerY = const Value.absent(),
+                Value<double> itemSize = const Value.absent(),
+                Value<int> zIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutfitItemsCompanion(
                 outfitId: outfitId,
                 itemId: itemId,
+                centerX: centerX,
+                centerY: centerY,
+                itemSize: itemSize,
+                zIndex: zIndex,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String outfitId,
                 required String itemId,
+                Value<double> centerX = const Value.absent(),
+                Value<double> centerY = const Value.absent(),
+                Value<double> itemSize = const Value.absent(),
+                Value<int> zIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutfitItemsCompanion.insert(
                 outfitId: outfitId,
                 itemId: itemId,
+                centerX: centerX,
+                centerY: centerY,
+                itemSize: itemSize,
+                zIndex: zIndex,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

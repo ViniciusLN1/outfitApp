@@ -182,7 +182,7 @@ final totalOutfitsProvider = AutoDisposeStreamProvider<int>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TotalOutfitsRef = AutoDisposeStreamProviderRef<int>;
-String _$outfitControllerHash() => r'0c18f7242951d83feb04d21057d063490b04618d';
+String _$outfitControllerHash() => r'90e922d6ae1cf7183774c55bf03e6525f344af07';
 
 /// See also [OutfitController].
 @ProviderFor(OutfitController)

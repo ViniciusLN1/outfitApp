@@ -10,16 +10,7 @@ import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
 import '../../services/image_storage_service.dart';
-
-const _categoryOrder = {
-  'chapeu': 0, 'camisa': 1, 'blusa': 2,
-  'cinto': 3, 'calca': 4, 'sapato': 5, 'acessorios': 6,
-};
-
-List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
-    [...items]..sort((a, b) =>
-        (_categoryOrder[a.category] ?? 9).compareTo(
-          _categoryOrder[b.category] ?? 9));
+import '../../widgets/outfit_layout_preview.dart';
 
 enum _ViewMode { outfits, items }
 
@@ -273,7 +264,6 @@ class _OutfitCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isFav = outfit.isFavorite == 1;
-    final itemsAsync = ref.watch(clothingItemsForOutfitProvider(outfit.id));
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -283,39 +273,7 @@ class _OutfitCard extends ConsumerWidget {
             child: GestureDetector(
               onTap: onTap,
               behavior: HitTestBehavior.opaque,
-              child: itemsAsync.when(
-              data: (items) {
-                if (items.isEmpty) {
-                  return Center(
-                    child: Icon(Icons.style_outlined,
-                        size: 48, color: Colors.grey.shade300),
-                  );
-                }
-                return LayoutBuilder(
-                  builder: (ctx, constraints) {
-                    final visible = _sortAnatomically(items).take(3).toList();
-                    final slotH = constraints.maxHeight / visible.length;
-                    return Column(
-                      children: visible
-                          .map(
-                            (it) => SizedBox(
-                              width: constraints.maxWidth,
-                              height: slotH,
-                              child: ExtendedImage.file(
-                                File(it.imagePath),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                );
-              },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => const SizedBox.shrink(),
-            ),
+              child: OutfitLayoutPreview(outfitId: outfit.id),
             ),
           ),
           Padding(
@@ -628,10 +586,11 @@ class _OutfitDetailSheetState extends ConsumerState<_OutfitDetailSheet> {
   }
 
   Future<void> _toggleFav() async {
+    final wasFav = _isFav;
+    setState(() => _isFav = !wasFav); // feedback visual instantâneo
     await ref
         .read(outfitControllerProvider.notifier)
-        .toggleFavorite(widget.outfit.id, _isFav);
-    if (mounted) setState(() => _isFav = !_isFav);
+        .toggleFavorite(widget.outfit.id, wasFav);
   }
 
   Future<void> _save() async {
@@ -663,32 +622,8 @@ class _OutfitDetailSheetState extends ConsumerState<_OutfitDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final itemsAsync =
-        ref.watch(clothingItemsForOutfitProvider(widget.outfit.id));
-    final scheme = Theme.of(context).colorScheme;
     return _DetailSheetScaffold(
-      preview: itemsAsync.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return Center(
-              child: Icon(Icons.style_outlined,
-                  size: 48, color: scheme.onSurfaceVariant),
-            );
-          }
-          return Row(
-            children: _sortAnatomically(items)
-                .map((it) => Expanded(
-                      child: ExtendedImage.file(
-                        File(it.imagePath),
-                        fit: BoxFit.contain,
-                      ),
-                    ))
-                .toList(),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const SizedBox.shrink(),
-      ),
+      preview: OutfitLayoutPreview(outfitId: widget.outfit.id),
       children: [
         Row(
           children: [

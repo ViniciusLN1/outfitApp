@@ -1,5 +1,8 @@
 import 'package:drift/drift.dart';
 
+@TableIndex(name: 'idx_outfits_date_created', columns: {#dateCreated})
+@TableIndex(name: 'idx_outfits_favorite_date', columns: {#isFavorite, #dateCreated})
+@TableIndex(name: 'idx_outfits_usage_date', columns: {#usageCount, #dateCreated})
 class Outfits extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();

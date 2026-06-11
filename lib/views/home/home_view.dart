@@ -10,16 +10,7 @@ import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../database/app_database.dart';
-
-const _categoryOrder = {
-  'chapeu': 0, 'camisa': 1, 'blusa': 2,
-  'cinto': 3, 'calca': 4, 'sapato': 5, 'acessorios': 6,
-};
-
-List<ClothingItem> _sortAnatomically(List<ClothingItem> items) =>
-    [...items]..sort((a, b) =>
-        (_categoryOrder[a.category] ?? 9).compareTo(
-          _categoryOrder[b.category] ?? 9));
+import '../../widgets/outfit_layout_preview.dart';
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
@@ -449,8 +440,6 @@ class _OutfitCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(clothingItemsForOutfitProvider(outfit.id));
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: GestureDetector(
@@ -460,34 +449,7 @@ class _OutfitCard extends ConsumerWidget {
           child: Column(
             children: [
               Expanded(
-                child: itemsAsync.when(
-                  data: (items) {
-                    if (items.isEmpty) {
-                      return Icon(Icons.style_outlined,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant);
-                    }
-                    final visible = _sortAnatomically(items).take(3).toList();
-                    return Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        children: visible
-                            .map(
-                              (it) => Expanded(
-                                child: ExtendedImage.file(
-                                  File(it.imagePath),
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => const SizedBox.shrink(),
-                ),
+                child: OutfitLayoutPreview(outfitId: outfit.id),
               ),
               _CardNameStrip(name: outfit.name),
             ],
