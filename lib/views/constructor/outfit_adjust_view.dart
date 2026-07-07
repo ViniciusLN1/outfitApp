@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
@@ -22,9 +23,18 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
   late final Map<ClothingCategory, ClothingItem> _items;
   late final Map<ClothingCategory, ItemTransform> _transforms;
 
+  /// Proporção (largura / altura) intrínseca de cada imagem, usada para que a
+  /// moldura de seleção e a alça acompanhem a peça e não o quadrado invisível.
+  final Map<ClothingCategory, double> _aspect = {};
+
   ClothingCategory? _selected;
   int _zTop = 0;
-  double _startSize = 0;
+
+  /// Estado incremental do gesto de pinça (escala). Guardar a escala anterior e
+  /// a contagem de dedos evita o "colapso" do tamanho quando a pinça termina e
+  /// um dos dedos sai antes do outro (a escala volta a 1.0 com um dedo só).
+  double _lastScale = 1.0;
+  int _lastPointers = 0;
 
   @override
   void initState() {
@@ -37,6 +47,25 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
       for (final c in _items.keys) c: s.transforms[c]!,
     };
     _zTop = _transforms.values.fold(0, (m, t) => t.z > m ? t.z : m);
+    _loadAspects();
+  }
+
+  Future<void> _loadAspects() async {
+    final loaded = <ClothingCategory, double>{};
+    for (final entry in _items.entries) {
+      try {
+        final bytes = await File(entry.value.imagePath).readAsBytes();
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final img = frame.image;
+        loaded[entry.key] = img.width / img.height;
+        img.dispose();
+      } catch (_) {
+        // Mantém proporção quadrada (1.0) caso a imagem não possa ser lida.
+      }
+    }
+    if (!mounted) return;
+    setState(() => _aspect.addAll(loaded));
   }
 
   void _onStart(ClothingCategory c) {
@@ -44,7 +73,8 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
       _selected = c;
       _zTop += 1;
       _transforms[c] = _transforms[c]!.copyWith(z: _zTop);
-      _startSize = _transforms[c]!.size;
+      _lastScale = 1.0;
+      _lastPointers = 0;
     });
   }
 
@@ -55,19 +85,33 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
     double ch,
   ) {
     final t = _transforms[c]!;
+    var size = t.size;
+    // Só redimensiona com 2+ dedos. Aplica a escala de forma incremental
+    // (fator entre quadros) e ignora o quadro em que a contagem de dedos muda,
+    // evitando o salto/colapso ao iniciar ou encerrar a pinça.
+    if (d.pointerCount >= 2 && _lastPointers >= 2) {
+      final factor = d.scale / _lastScale;
+      size = (t.size * factor).clamp(0.08, 1.4);
+    }
+    _lastScale = d.scale;
+    _lastPointers = d.pointerCount;
     setState(() {
       _transforms[c] = t.copyWith(
-        size: (_startSize * d.scale).clamp(0.08, 1.4),
+        size: size,
         centerX: (t.centerX + d.focalPointDelta.dx / cw).clamp(0.0, 1.0),
         centerY: (t.centerY + d.focalPointDelta.dy / ch).clamp(0.0, 1.0),
       );
     });
   }
 
-  void _resizeByHandle(ClothingCategory c, double dx, double cw) {
+  void _resizeByHandle(ClothingCategory c, Offset delta, double cw) {
     final t = _transforms[c]!;
+    // A peça cresce simetricamente em torno do centro, então a alça precisa do
+    // dobro do deslocamento para acompanhar o dedo. Usar dx + dy permite
+    // redimensionar arrastando na diagonal independente da proporção da peça.
+    final deltaSize = (delta.dx + delta.dy) / cw;
     setState(() {
-      _transforms[c] = t.copyWith(size: (t.size + dx / cw).clamp(0.08, 1.4));
+      _transforms[c] = t.copyWith(size: (t.size + deltaSize).clamp(0.08, 1.4));
     });
   }
 
@@ -80,15 +124,26 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
     });
   }
 
-  void _confirm() {
+  /// Grava o arranjo no controller. Idempotente: pode ser chamado tanto pelos
+  /// botões de concluir quanto ao sair pelo gesto/botão "voltar".
+  void _commit() {
     ref.read(constructorControllerProvider.notifier).setTransforms(_transforms);
+  }
+
+  void _confirm() {
+    _commit();
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _commit();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Ajustar Look'),
         actions: [
@@ -164,6 +219,7 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
                 ),
               ],
             ),
+      ),
     );
   }
 
@@ -172,7 +228,9 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
       ..sort((a, b) => _transforms[a]!.z.compareTo(_transforms[b]!.z));
     final scheme = Theme.of(context).colorScheme;
 
+    final sel = _selected;
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Positioned.fill(
           child: GestureDetector(
@@ -181,8 +239,55 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
           ),
         ),
         for (final c in ordered) _buildPiece(c, cw, ch, scheme),
+        // A alça vive acima de todas as peças (não aninhada no GestureDetector
+        // de escala da peça), evitando que o gesto de escala do pai sobrescreva
+        // o redimensionamento e faça a peça voltar ao tamanho anterior.
+        if (sel != null && _items.containsKey(sel))
+          _buildHandle(sel, cw, ch, scheme),
       ],
     );
+  }
+
+  Widget _buildHandle(
+    ClothingCategory c,
+    double cw,
+    double ch,
+    ColorScheme scheme,
+  ) {
+    final t = _transforms[c]!;
+    final side = t.size * cw;
+    final boxLeft = t.centerX * cw - side / 2;
+    final boxTop = t.centerY * ch - side / 2;
+    final (iw, ih) = _imageRect(c, side);
+    final cornerX = boxLeft + (side - iw) / 2 + iw;
+    final cornerY = boxTop + (side - ih) / 2 + ih;
+    const handle = 26.0;
+
+    return Positioned(
+      left: cornerX - handle / 2,
+      top: cornerY - handle / 2,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: (d) => _resizeByHandle(c, d.delta, cw),
+        child: Container(
+          width: handle,
+          height: handle,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            shape: BoxShape.circle,
+            border: Border.all(color: scheme.onPrimary, width: 1.5),
+          ),
+          child: Icon(Icons.open_in_full, size: 14, color: scheme.onPrimary),
+        ),
+      ),
+    );
+  }
+
+  /// Largura/altura reais da imagem (BoxFit.contain) dentro do quadrado [side].
+  (double, double) _imageRect(ClothingCategory c, double side) {
+    final ar = _aspect[c] ?? 1.0;
+    if (ar >= 1) return (side, side / ar);
+    return (side * ar, side);
   }
 
   Widget _buildPiece(
@@ -197,6 +302,12 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
     final top = t.centerY * ch - side / 2;
     final selected = _selected == c;
 
+    // Retângulo real ocupado pela imagem (BoxFit.contain) dentro do quadrado.
+    // A moldura segue este retângulo, não o quadrado invisível.
+    final (iw, ih) = _imageRect(c, side);
+    final imgLeft = (side - iw) / 2;
+    final imgTop = (side - ih) / 2;
+
     return Positioned(
       left: left,
       top: top,
@@ -209,35 +320,22 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Container(
-              decoration: selected
-                  ? BoxDecoration(
-                      border: Border.all(color: scheme.primary, width: 1.5),
-                      borderRadius: BorderRadius.circular(4),
-                    )
-                  : null,
-              child: ExtendedImage.file(
-                File(_items[c]!.imagePath),
-                fit: BoxFit.contain,
-              ),
+            ExtendedImage.file(
+              File(_items[c]!.imagePath),
+              fit: BoxFit.contain,
             ),
             if (selected)
               Positioned(
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanUpdate: (d) => _resizeByHandle(c, d.delta.dx, cw),
+                left: imgLeft,
+                top: imgTop,
+                width: iw,
+                height: ih,
+                child: IgnorePointer(
                   child: Container(
-                    width: 26,
-                    height: 26,
                     decoration: BoxDecoration(
-                      color: scheme.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: scheme.onPrimary, width: 1.5),
+                      border: Border.all(color: scheme.primary, width: 1.5),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(Icons.open_in_full,
-                        size: 14, color: scheme.onPrimary),
                   ),
                 ),
               ),

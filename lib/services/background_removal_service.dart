@@ -3,11 +3,10 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
+
 class BackgroundRemovalService {
-  // 10.0.2.2 = host machine via emulador Android.
-  // Para dispositivo físico, usar o IP LAN da máquina host.
-  static const String _baseUrl = 'http://192.168.100.232:8000';
-  static const Duration _timeout = Duration(seconds: 45);
+  static const Duration _timeout = AppConfig.backgroundRemovalTimeout;
 
   // Client compartilhado: mantém keep-alive e evita abrir socket por request.
   static final http.Client _client = http.Client();
@@ -16,7 +15,8 @@ class BackgroundRemovalService {
     Uint8List imageBytes, {
     String filename = 'photo.jpg',
   }) async {
-    final uri = Uri.parse('$_baseUrl/remove-background');
+    final uri =
+        Uri.parse('${AppConfig.backgroundRemovalBaseUrl}/remove-background');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(
         http.MultipartFile.fromBytes('file', imageBytes, filename: filename),

@@ -64,16 +64,6 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
-  Stream<List<ClothingItem>> watchClothingItemsForOutfit(String outfitId) {
-    final query = select(clothingItems).join([
-      innerJoin(outfitItems, outfitItems.itemId.equalsExp(clothingItems.id)),
-    ])
-      ..where(outfitItems.outfitId.equals(outfitId));
-    return query.watch().map(
-          (rows) => rows.map((r) => r.readTable(clothingItems)).toList(),
-        );
-  }
-
   /// Peças de um look com o posicionamento salvo (ordenadas por z).
   /// Looks legados (itemSize == 0) recebem o layout anatômico padrão.
   Stream<List<OutfitPlacement>> watchOutfitPlacements(String outfitId) {

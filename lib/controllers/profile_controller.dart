@@ -1,9 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'preferences.dart';
+
+part 'profile_controller.g.dart';
 
 class ProfileState {
   final String username;
@@ -19,16 +22,23 @@ class ProfileState {
   }
 }
 
-class ProfileNotifier extends StateNotifier<ProfileState> {
-  ProfileNotifier(super.initial);
-
+@Riverpod(keepAlive: true)
+class ProfileController extends _$ProfileController {
   static const _keyUsername = 'username';
   static const _keyPhoto = 'photoPath';
 
+  @override
+  ProfileState build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return ProfileState(
+      username: prefs.getString(_keyUsername) ?? 'Usuário',
+      photoPath: prefs.getString(_keyPhoto),
+    );
+  }
+
   Future<void> setUsername(String name) async {
     state = state.copyWith(username: name);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUsername, name);
+    await ref.read(sharedPreferencesProvider).setString(_keyUsername, name);
   }
 
   Future<void> pickAndSavePhoto() async {
@@ -46,12 +56,6 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     await file.writeAsBytes(bytes);
 
     state = state.copyWith(photoPath: file.path);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyPhoto, file.path);
+    await ref.read(sharedPreferencesProvider).setString(_keyPhoto, file.path);
   }
 }
-
-final profileProvider =
-    StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
-  return ProfileNotifier(const ProfileState());
-});

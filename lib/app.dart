@@ -166,7 +166,7 @@ class OutfitApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(currentTabIndexProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode = ref.watch(themeModeControllerProvider);
 
     return MaterialApp(
       title: 'OutfitApp',

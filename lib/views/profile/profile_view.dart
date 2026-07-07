@@ -14,8 +14,8 @@ class ProfileView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final totalItems = ref.watch(totalClothingItemsProvider);
     final totalOutfits = ref.watch(totalOutfitsProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final profile = ref.watch(profileProvider);
+    final themeMode = ref.watch(themeModeControllerProvider);
+    final profile = ref.watch(profileControllerProvider);
     final isDark = themeMode == ThemeMode.dark;
 
     return Scaffold(
@@ -70,7 +70,8 @@ class _AvatarSection extends ConsumerWidget {
                 : Icon(Icons.person, size: 56, color: colorScheme.primary),
           ),
           GestureDetector(
-            onTap: () => ref.read(profileProvider.notifier).pickAndSavePhoto(),
+            onTap: () =>
+                ref.read(profileControllerProvider.notifier).pickAndSavePhoto(),
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
@@ -121,7 +122,7 @@ class _UsernameSection extends ConsumerWidget {
             onPressed: () {
               final name = ctrl.text.trim();
               if (name.isNotEmpty) {
-                ref.read(profileProvider.notifier).setUsername(name);
+                ref.read(profileControllerProvider.notifier).setUsername(name);
               }
               Navigator.pop(ctx);
             },
@@ -208,7 +209,7 @@ class _ThemeToggle extends ConsumerWidget {
             Switch(
               value: isDark,
               onChanged: (v) => ref
-                  .read(themeModeProvider.notifier)
+                  .read(themeModeControllerProvider.notifier)
                   .setMode(v ? ThemeMode.dark : ThemeMode.light),
             ),
             const SizedBox(width: 8),

@@ -33,7 +33,19 @@ class ConstructorState {
   final Map<ClothingCategory, ClothingItem?> items;
   final Map<ClothingCategory, ItemTransform> transforms;
 
-  const ConstructorState({required this.items, required this.transforms});
+  /// Id do outfit em edição. Quando preenchido, salvar deve ATUALIZAR este
+  /// outfit em vez de criar um novo.
+  final String? editingOutfitId;
+
+  /// Nome atual do outfit em edição (para pré-preencher o diálogo de salvar).
+  final String? editingOutfitName;
+
+  const ConstructorState({
+    required this.items,
+    required this.transforms,
+    this.editingOutfitId,
+    this.editingOutfitName,
+  });
 
   /// Categorias que possuem peça alocada.
   Iterable<ClothingCategory> get occupied =>
@@ -46,10 +58,12 @@ class ConstructorState {
       ConstructorState(
         items: items ?? this.items,
         transforms: transforms ?? this.transforms,
+        editingOutfitId: editingOutfitId,
+        editingOutfitName: editingOutfitName,
       );
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ConstructorController extends _$ConstructorController {
   @override
   ConstructorState build() => ConstructorState(
@@ -61,10 +75,6 @@ class ConstructorController extends _$ConstructorController {
 
   void selectItem(ClothingCategory category, ClothingItem? item) {
     state = state.copyWith(items: {...state.items, category: item});
-  }
-
-  void clearCategory(ClothingCategory category) {
-    state = state.copyWith(items: {...state.items, category: null});
   }
 
   void clearAll() {
@@ -79,6 +89,9 @@ class ConstructorController extends _$ConstructorController {
   Future<void> loadOutfit(String outfitId) async {
     final db = ref.read(appDatabaseProvider);
     final placements = await db.watchOutfitPlacements(outfitId).first;
+    final outfit = await (db.select(db.outfits)
+          ..where((t) => t.id.equals(outfitId)))
+        .getSingleOrNull();
     final fresh = build();
     final items = {...fresh.items};
     final transforms = {...fresh.transforms};
@@ -90,6 +103,11 @@ class ConstructorController extends _$ConstructorController {
       items[category] = p.item;
       transforms[category] = p.transform;
     }
-    state = ConstructorState(items: items, transforms: transforms);
+    state = ConstructorState(
+      items: items,
+      transforms: transforms,
+      editingOutfitId: outfitId,
+      editingOutfitName: outfit?.name,
+    );
   }
 }

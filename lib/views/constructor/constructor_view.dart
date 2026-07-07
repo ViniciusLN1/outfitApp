@@ -33,11 +33,13 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
   }
 
   Future<void> _showSaveDialog(ConstructorState canvas) async {
-    final nameController = TextEditingController();
+    final isEditing = canvas.editingOutfitId != null;
+    final nameController =
+        TextEditingController(text: canvas.editingOutfitName ?? '');
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Salvar Outfit'),
+        title: Text(isEditing ? 'Atualizar Outfit' : 'Salvar Outfit'),
         content: TextField(
           controller: nameController,
           decoration: const InputDecoration(
@@ -51,39 +53,74 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancelar'),
           ),
+          // Em edição, oferece explicitamente "Salvar como novo" para o usuário
+          // que quer derivar um look novo sem sobrescrever o original.
+          if (isEditing)
+            TextButton(
+              onPressed: () => _persist(ctx, nameController.text, asNew: true),
+              child: const Text('Salvar como novo'),
+            ),
           ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-
-              final placements = <OutfitItemPlacement>[
-                for (final entry in canvas.items.entries)
-                  if (entry.value != null)
-                    (
-                      itemId: entry.value!.id,
-                      transform: canvas.transforms[entry.key]!,
-                    ),
-              ];
-
-              await ref
-                  .read(outfitControllerProvider.notifier)
-                  .saveOutfit(name: name, placements: placements);
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Outfit salvo!')),
-                );
-                await _askExportToGallery(canvas);
-              }
-
-              ref.read(constructorControllerProvider.notifier).clearAll();
-            },
-            child: const Text('Salvar'),
+            onPressed: () => _persist(ctx, nameController.text, asNew: false),
+            child: Text(isEditing ? 'Atualizar' : 'Salvar'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _persist(
+    BuildContext ctx,
+    String rawName, {
+    required bool asNew,
+  }) async {
+    final name = rawName.trim();
+    if (name.isEmpty) return;
+    Navigator.pop(ctx);
+
+    // Lê o estado vivo no momento de salvar (e não o snapshot capturado no
+    // build), garantindo que os ajustes feitos na tela "Ajustar" sejam
+    // persistidos no lugar exato em que ficaram.
+    final live = ref.read(constructorControllerProvider);
+    final existingId = asNew ? null : live.editingOutfitId;
+
+    final placements = <OutfitItemPlacement>[
+      for (final entry in live.items.entries)
+        if (entry.value != null)
+          (
+            itemId: entry.value!.id,
+            transform: live.transforms[entry.key]!,
+          ),
+    ];
+
+    try {
+      await ref.read(outfitControllerProvider.notifier).saveOutfit(
+            name: name,
+            placements: placements,
+            existingId: existingId,
+          );
+    } catch (e) {
+      // Mantém o canvas intacto para o usuário tentar de novo.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar o outfit: $e')),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(existingId == null
+              ? 'Outfit salvo!'
+              : 'Outfit atualizado!'),
+        ),
+      );
+      await _askExportToGallery(live);
+    }
+
+    ref.read(constructorControllerProvider.notifier).clearAll();
   }
 
   Future<void> _askExportToGallery(ConstructorState canvas) async {

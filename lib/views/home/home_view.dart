@@ -17,7 +17,8 @@ class HomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final username = ref.watch(profileProvider).username;
+    final username =
+        ref.watch(profileControllerProvider.select((p) => p.username));
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
       body: ListView(

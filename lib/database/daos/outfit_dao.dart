@@ -34,9 +34,6 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
             ]))
           .watch();
 
-  Future<List<OutfitItem>> getItemsForOutfit(String outfitId) =>
-      (select(outfitItems)..where((t) => t.outfitId.equals(outfitId))).get();
-
   Future<void> upsertOutfit(OutfitsCompanion companion) =>
       into(outfits).insertOnConflictUpdate(companion);
 
@@ -45,6 +42,9 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
 
   Future<int> deleteOutfit(String id) =>
       (delete(outfits)..where((t) => t.id.equals(id))).go();
+
+  Future<int> deleteOutfitItems(String outfitId) =>
+      (delete(outfitItems)..where((t) => t.outfitId.equals(outfitId))).go();
 
   Future<void> toggleFavorite(String id, bool newValue) =>
       (update(outfits)..where((t) => t.id.equals(id)))

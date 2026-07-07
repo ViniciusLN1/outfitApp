@@ -185,6 +185,146 @@ class _ClothingByCategoryProviderElement
   String get category => (origin as ClothingByCategoryProvider).category;
 }
 
+String _$recentClothingHash() => r'72b70b3bea24c53e62bcade0edfe98d47a81320e';
+
+/// See also [recentClothing].
+@ProviderFor(recentClothing)
+final recentClothingProvider =
+    AutoDisposeStreamProvider<List<ClothingItem>>.internal(
+      recentClothing,
+      name: r'recentClothingProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$recentClothingHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef RecentClothingRef = AutoDisposeStreamProviderRef<List<ClothingItem>>;
+String _$outfitPlacementsHash() => r'ccdd687df4a6e097445b4c4a303308b880cbee78';
+
+/// See also [outfitPlacements].
+@ProviderFor(outfitPlacements)
+const outfitPlacementsProvider = OutfitPlacementsFamily();
+
+/// See also [outfitPlacements].
+class OutfitPlacementsFamily extends Family<AsyncValue<List<OutfitPlacement>>> {
+  /// See also [outfitPlacements].
+  const OutfitPlacementsFamily();
+
+  /// See also [outfitPlacements].
+  OutfitPlacementsProvider call(String outfitId) {
+    return OutfitPlacementsProvider(outfitId);
+  }
+
+  @override
+  OutfitPlacementsProvider getProviderOverride(
+    covariant OutfitPlacementsProvider provider,
+  ) {
+    return call(provider.outfitId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'outfitPlacementsProvider';
+}
+
+/// See also [outfitPlacements].
+class OutfitPlacementsProvider
+    extends AutoDisposeStreamProvider<List<OutfitPlacement>> {
+  /// See also [outfitPlacements].
+  OutfitPlacementsProvider(String outfitId)
+    : this._internal(
+        (ref) => outfitPlacements(ref as OutfitPlacementsRef, outfitId),
+        from: outfitPlacementsProvider,
+        name: r'outfitPlacementsProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$outfitPlacementsHash,
+        dependencies: OutfitPlacementsFamily._dependencies,
+        allTransitiveDependencies:
+            OutfitPlacementsFamily._allTransitiveDependencies,
+        outfitId: outfitId,
+      );
+
+  OutfitPlacementsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.outfitId,
+  }) : super.internal();
+
+  final String outfitId;
+
+  @override
+  Override overrideWith(
+    Stream<List<OutfitPlacement>> Function(OutfitPlacementsRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: OutfitPlacementsProvider._internal(
+        (ref) => create(ref as OutfitPlacementsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        outfitId: outfitId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<OutfitPlacement>> createElement() {
+    return _OutfitPlacementsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is OutfitPlacementsProvider && other.outfitId == outfitId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, outfitId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin OutfitPlacementsRef
+    on AutoDisposeStreamProviderRef<List<OutfitPlacement>> {
+  /// The parameter `outfitId` of this provider.
+  String get outfitId;
+}
+
+class _OutfitPlacementsProviderElement
+    extends AutoDisposeStreamProviderElement<List<OutfitPlacement>>
+    with OutfitPlacementsRef {
+  _OutfitPlacementsProviderElement(super.provider);
+
+  @override
+  String get outfitId => (origin as OutfitPlacementsProvider).outfitId;
+}
+
 String _$clothingControllerHash() =>
     r'c6b68228c66c5ee97e24d0d2176814cecec7aa58';
 

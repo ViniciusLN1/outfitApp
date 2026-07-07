@@ -34,9 +34,11 @@ Stream<int> totalOutfits(TotalOutfitsRef ref) {
   return db.outfits.count().watchSingle();
 }
 
-final recentOutfitsProvider = StreamProvider<List<Outfit>>((ref) {
-  return ref.watch(appDatabaseProvider).outfitDao.watchRecent(limit: 10);
-});
+@riverpod
+Stream<List<Outfit>> recentOutfits(RecentOutfitsRef ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return db.outfitDao.watchRecent(limit: 10);
+}
 
 @riverpod
 class OutfitController extends _$OutfitController {
@@ -50,21 +52,32 @@ class OutfitController extends _$OutfitController {
   }) async {
     final db = ref.read(appDatabaseProvider);
     final id = existingId ?? const Uuid().v4();
-    await db.outfitDao.upsertOutfit(OutfitsCompanion(
-      id: Value(id),
-      name: Value(name),
-      dateCreated: Value(DateTime.now().millisecondsSinceEpoch),
-    ));
-    for (final p in placements) {
-      await db.outfitDao.insertOutfitItem(OutfitItemsCompanion(
-        outfitId: Value(id),
-        itemId: Value(p.itemId),
-        centerX: Value(p.transform.centerX),
-        centerY: Value(p.transform.centerY),
-        itemSize: Value(p.transform.size),
-        zIndex: Value(p.transform.z),
-      ));
-    }
+    // Atômico: em edição, apagar as peças antigas e reinserir as novas precisa
+    // acontecer numa única transação, senão uma falha no meio deixa o outfit
+    // sem nenhuma peça (dado destruído).
+    await db.transaction(() async {
+      if (existingId == null) {
+        await db.outfitDao.upsertOutfit(OutfitsCompanion(
+          id: Value(id),
+          name: Value(name),
+          dateCreated: Value(DateTime.now().millisecondsSinceEpoch),
+        ));
+      } else {
+        // Edição: atualiza só o nome (mantém favorito/uso/data) e troca as peças.
+        await db.outfitDao.renameOutfit(id, name);
+        await db.outfitDao.deleteOutfitItems(id);
+      }
+      for (final p in placements) {
+        await db.outfitDao.insertOutfitItem(OutfitItemsCompanion(
+          outfitId: Value(id),
+          itemId: Value(p.itemId),
+          centerX: Value(p.transform.centerX),
+          centerY: Value(p.transform.centerY),
+          itemSize: Value(p.transform.size),
+          zIndex: Value(p.transform.z),
+        ));
+      }
+    });
     return id;
   }
 

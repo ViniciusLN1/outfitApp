@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier(super.initial);
+import 'preferences.dart';
 
+part 'theme_controller.g.dart';
+
+@Riverpod(keepAlive: true)
+class ThemeModeController extends _$ThemeModeController {
   static const _key = 'themeMode';
+
+  @override
+  ThemeMode build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getString(_key) == 'dark' ? ThemeMode.dark : ThemeMode.light;
+  }
 
   Future<void> setMode(ThemeMode mode) async {
     state = mode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, mode == ThemeMode.dark ? 'dark' : 'light');
+    await ref
+        .read(sharedPreferencesProvider)
+        .setString(_key, mode == ThemeMode.dark ? 'dark' : 'light');
   }
 }
-
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  return ThemeModeNotifier(ThemeMode.light);
-});

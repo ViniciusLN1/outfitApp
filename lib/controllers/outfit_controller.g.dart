@@ -182,7 +182,24 @@ final totalOutfitsProvider = AutoDisposeStreamProvider<int>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TotalOutfitsRef = AutoDisposeStreamProviderRef<int>;
-String _$outfitControllerHash() => r'90e922d6ae1cf7183774c55bf03e6525f344af07';
+String _$recentOutfitsHash() => r'5f781cac85357665f3dd9ab72526c1d0a2d5bd83';
+
+/// See also [recentOutfits].
+@ProviderFor(recentOutfits)
+final recentOutfitsProvider = AutoDisposeStreamProvider<List<Outfit>>.internal(
+  recentOutfits,
+  name: r'recentOutfitsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$recentOutfitsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef RecentOutfitsRef = AutoDisposeStreamProviderRef<List<Outfit>>;
+String _$outfitControllerHash() => r'123c851dfdb72c4339e0086ca9c362f1d77c25ec';
 
 /// See also [OutfitController].
 @ProviderFor(OutfitController)
