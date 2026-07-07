@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../controllers/theme_controller.dart';
+import '../calendar/calendar_view.dart';
+import '../replay/replay_view.dart';
+import '../stats/stats_view.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -35,10 +38,50 @@ class ProfileView extends ConsumerWidget {
                 _StatCard(label: 'Outfits', valueAsync: totalOutfits),
               ],
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
+            const _ProfileActions(),
+            const SizedBox(height: 32),
             _ThemeToggle(isDark: isDark),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Ações (Calendário, Estatísticas, Closet Replay) ──────────────────────────
+
+class _ProfileActions extends StatelessWidget {
+  const _ProfileActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget tile(IconData icon, String label, Widget page) => ListTile(
+          leading: Icon(icon, color: scheme.primary),
+          title: Text(label,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => page),
+          ),
+        );
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        children: [
+          tile(Icons.calendar_month_outlined, 'Calendário',
+              const CalendarView()),
+          Divider(height: 1, color: scheme.outlineVariant),
+          tile(Icons.insights_outlined, 'Estatísticas', const StatsView()),
+          Divider(height: 1, color: scheme.outlineVariant),
+          tile(Icons.replay_circle_filled_outlined, 'Closet Replay',
+              const ReplayView()),
+        ],
       ),
     );
   }

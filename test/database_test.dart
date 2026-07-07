@@ -62,17 +62,19 @@ void main() {
     expect(remaining, isEmpty);
   });
 
-  test('incrementUsage increments atomically without prior read', () async {
+  test('deleting an outfit cascades to outfit_usages', () async {
     await seedOutfitWithItem();
-    await db.outfitDao.incrementUsage('outfit-1');
-    await db.outfitDao.incrementUsage('outfit-1');
-    final outfit = await (db.select(db.outfits)
-          ..where((t) => t.id.equals('outfit-1')))
-        .getSingle();
-    expect(outfit.usageCount, 2);
+    await db.usageDao.registerUsage(
+      outfitId: 'outfit-1',
+      when: DateTime.fromMillisecondsSinceEpoch(0),
+      hasTime: false,
+    );
+    await db.outfitDao.deleteOutfit('outfit-1');
+    final remaining = await db.select(db.outfitUsages).get();
+    expect(remaining, isEmpty);
   });
 
-  test('schema creates the v4 indexes', () async {
+  test('schema creates the expected indexes', () async {
     final rows = await db
         .customSelect(
           "SELECT name FROM sqlite_master WHERE type = 'index' "
@@ -86,9 +88,10 @@ void main() {
         'idx_outfit_items_item_id',
         'idx_outfits_date_created',
         'idx_outfits_favorite_date',
-        'idx_outfits_usage_date',
         'idx_clothing_items_category',
         'idx_clothing_items_date_added',
+        'idx_outfit_usages_outfit_id',
+        'idx_outfit_usages_used_at',
       }),
     );
   });

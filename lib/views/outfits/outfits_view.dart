@@ -8,9 +8,14 @@ import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
 import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
+import '../../controllers/usage_controller.dart';
 import '../../database/app_database.dart';
+import '../../models/item_color.dart';
 import '../../services/image_storage_service.dart';
+import '../../utils/date_format.dart';
 import '../../widgets/outfit_layout_preview.dart';
+import '../calendar/register_usage_dialog.dart';
+import '../search/search_view.dart';
 
 enum _ViewMode { outfits, items }
 
@@ -106,6 +111,13 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
       appBar: AppBar(
         title: const Text('Outfits'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Buscar',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SearchView()),
+            ),
+          ),
           if (_viewMode == _ViewMode.outfits)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -474,6 +486,7 @@ class _ItemDetailSheet extends ConsumerStatefulWidget {
 class _ItemDetailSheetState extends ConsumerState<_ItemDetailSheet> {
   late final TextEditingController _nameCtrl;
   late String _category;
+  late String? _color;
   bool _saving = false;
 
   @override
@@ -484,6 +497,7 @@ class _ItemDetailSheetState extends ConsumerState<_ItemDetailSheet> {
         ClothingCategory.values.any((c) => c.name == widget.item.category)
             ? widget.item.category
             : ClothingCategory.camisa.name;
+    _color = kItemColors.containsKey(widget.item.color) ? widget.item.color : null;
   }
 
   @override
@@ -505,6 +519,7 @@ class _ItemDetailSheetState extends ConsumerState<_ItemDetailSheet> {
           id: widget.item.id,
           name: name,
           category: _category,
+          color: _color,
         );
     if (!mounted) return;
     Navigator.pop(context);
@@ -547,6 +562,39 @@ class _ItemDetailSheetState extends ConsumerState<_ItemDetailSheet> {
                         child: Text(c.displayName),
                       ))
                   .toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Cor (opcional)',
+            border: OutlineInputBorder(),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: _color,
+              isDense: true,
+              isExpanded: true,
+              onChanged: (v) => setState(() => _color = v),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Sem cor'),
+                ),
+                ...kItemColors.entries.map(
+                  (e) => DropdownMenuItem<String?>(
+                    value: e.key,
+                    child: Row(
+                      children: [
+                        ColorDot(color: e.value),
+                        const SizedBox(width: 10),
+                        Text(colorLabel(e.key)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -653,6 +701,22 @@ class _OutfitDetailSheetState extends ConsumerState<_OutfitDetailSheet> {
           ),
         ),
         const SizedBox(height: 20),
+        const Divider(),
+        const SizedBox(height: 8),
+        _UsageSummary(outfitId: widget.outfit.id),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => showRegisterUsageDialog(
+            context: context,
+            ref: ref,
+            outfitId: widget.outfit.id,
+          ),
+          icon: const Icon(Icons.event_available_outlined, size: 18),
+          label: const Text('Registrar uso'),
+        ),
+        const SizedBox(height: 8),
+        _UsageHistoryList(outfitId: widget.outfit.id),
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
@@ -671,6 +735,111 @@ class _OutfitDetailSheetState extends ConsumerState<_OutfitDetailSheet> {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ─── Uso do outfit (histórico / último / total) ───────────────────────────────
+
+class _UsageSummary extends ConsumerWidget {
+  final String outfitId;
+  const _UsageSummary({required this.outfitId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = ref.watch(outfitUsageTotalProvider(outfitId)).value ?? 0;
+    final lastMs = ref.watch(outfitLastUsageProvider(outfitId)).value;
+    final scheme = Theme.of(context).colorScheme;
+    final last = lastMs == null
+        ? 'Nunca usado'
+        : formatUsage(lastMs, false);
+    return Row(
+      children: [
+        Expanded(
+          child: _UsageMetric(label: 'Total de usos', value: '$total'),
+        ),
+        Container(width: 1, height: 34, color: scheme.outlineVariant),
+        Expanded(
+          child: _UsageMetric(label: 'Último uso', value: last),
+        ),
+      ],
+    );
+  }
+}
+
+class _UsageMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  const _UsageMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _UsageHistoryList extends ConsumerWidget {
+  final String outfitId;
+  const _UsageHistoryList({required this.outfitId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(outfitUsageHistoryProvider(outfitId));
+    final scheme = Theme.of(context).colorScheme;
+    return history.when(
+      data: (usages) {
+        if (usages.isEmpty) {
+          return Text(
+            'Sem registros de uso.',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          );
+        }
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 180),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: usages.length,
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              color: scheme.outlineVariant,
+            ),
+            itemBuilder: (_, i) {
+              final u = usages[i];
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_note_outlined, size: 20),
+                title: Text(
+                  formatUsage(u.usedAt, u.hasTime),
+                  style: const TextStyle(fontSize: 13),
+                ),
+                trailing: IconButton(
+                  iconSize: 18,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () =>
+                      ref.read(usageControllerProvider.notifier).delete(u.id),
+                ),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => Text('Erro: $e'),
     );
   }
 }

@@ -32,16 +32,24 @@ void main() {
   Future<void> addOutfit(
     String id, {
     int favorite = 0,
-    int usage = 0,
     int date = 0,
   }) =>
       db.outfitDao.upsertOutfit(OutfitsCompanion(
         id: Value(id),
         name: Value('look-$id'),
         isFavorite: Value(favorite),
-        usageCount: Value(usage),
         dateCreated: Value(date),
       ));
+
+  Future<void> registerUsages(String outfitId, int n) async {
+    for (var i = 0; i < n; i++) {
+      await db.usageDao.registerUsage(
+        outfitId: outfitId,
+        when: DateTime.fromMillisecondsSinceEpoch(i),
+        hasTime: false,
+      );
+    }
+  }
 
   group('ClothingDao', () {
     test('watchByCategory filtra pela categoria', () async {
@@ -80,9 +88,11 @@ void main() {
       expect(ordered.first.id, 'b');
     });
 
-    test('watchMostUsed ordena por usageCount desc', () async {
-      await addOutfit('a', usage: 1);
-      await addOutfit('b', usage: 5);
+    test('watchMostUsed deriva a ordem do histórico de usos', () async {
+      await addOutfit('a');
+      await addOutfit('b');
+      await registerUsages('a', 1);
+      await registerUsages('b', 5);
       final ordered = await db.outfitDao.watchMostUsed().first;
       expect(ordered.first.id, 'b');
     });
@@ -97,14 +107,13 @@ void main() {
     });
 
     test('renameOutfit altera apenas o nome', () async {
-      await addOutfit('a', favorite: 1, usage: 3);
+      await addOutfit('a', favorite: 1);
       await db.outfitDao.renameOutfit('a', 'novo nome');
       final row = await (db.select(db.outfits)
             ..where((t) => t.id.equals('a')))
           .getSingle();
       expect(row.name, 'novo nome');
       expect(row.isFavorite, 1);
-      expect(row.usageCount, 3);
     });
   });
 }

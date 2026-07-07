@@ -57,6 +57,7 @@ views/ (UI)  →  controllers/ (Riverpod)  →  database/daos (Drift)  →  SQLi
 | name        | TEXT    |                               |
 | image_path  | TEXT    | caminho local do arquivo      |
 | category    | TEXT    | ver categorias abaixo         |
+| color       | TEXT?   | chave da paleta (opcional)    |
 | date_added  | INTEGER | timestamp (ms)                |
 
 ### `outfits`
@@ -65,7 +66,6 @@ views/ (UI)  →  controllers/ (Riverpod)  →  database/daos (Drift)  →  SQLi
 | id           | TEXT PK | UUID                     |
 | name         | TEXT    |                          |
 | is_favorite  | INTEGER | 0/1 (default 0)          |
-| usage_count  | INTEGER | default 0 (ver nota)     |
 | date_created | INTEGER | timestamp (ms)           |
 
 ### `outfit_items` (ligação N:N, PK composta `outfit_id` + `item_id`)
@@ -78,13 +78,34 @@ views/ (UI)  →  controllers/ (Riverpod)  →  database/daos (Drift)  →  SQLi
 | item_size | REAL    | lado como fração da largura (0 = legado) |
 | z_index   | INTEGER | ordem de empilhamento                    |
 
+### `outfit_usages` (histórico de uso — fonte única das estatísticas)
+| coluna    | tipo    | notas                              |
+|-----------|---------|------------------------------------|
+| id        | TEXT PK | UUID                               |
+| outfit_id | TEXT FK | → outfits(id) ON DELETE CASCADE    |
+| used_at   | INTEGER | timestamp (ms); só data se `has_time` = 0 |
+| has_time  | INTEGER | 0/1 — se o horário foi informado   |
+
 **Categorias** (enum `ClothingCategory`, gravadas como string):
 `chapeu`, `camisa`, `blusa`, `cinto`, `calca`, `sapato`, `acessorios`.
 
-> **Nota sobre `usage_count`:** a coluna alimenta a ordenação "Mais Usados" (aba
-> Outfits), mas nenhum fluxo ainda chama `incrementUsage`, então na prática todos
-> os looks ficam com contagem 0. A coluna e a query foram mantidas por estarem
-> ligadas a um controle visível na UI.
+**Cores** (paleta fixa `kItemColors`, chave gravada como string): `preto`,
+`branco`, `cinza`, `azul`, `vermelho`, `verde`, `amarelo`, `marrom`, `rosa`,
+`laranja`, `roxo`, `bege`.
+
+> **Uso é derivado, não contado.** Não existe coluna `usage_count`: "Mais Usados",
+> calendário e todas as estatísticas são derivados de `outfit_usages`.
+
+## Funcionalidades
+
+- **Busca global** (ícone na aba Outfits): peças e outfits por nome, instantânea,
+  case-insensitive e parcial; guarda as 3 últimas buscas.
+- **Calendário** (Perfil): registra uso por data (horário opcional), filtra por
+  look e lista os usos do dia. Detalhe do outfit mostra histórico, último e total.
+- **Estatísticas** (Perfil): totais, distribuição por categoria/cor, peças mais
+  usadas e nunca usadas, crescimento do acervo por mês.
+- **Closet Replay** (Perfil): peças/outfits esquecidos, mais repetidos, rotação,
+  cor/categoria mais e menos usadas, atividade semanal/mensal e meta mensal visual.
 
 ## Executando
 

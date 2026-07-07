@@ -1,11 +1,11 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'outfit_dao.dart';
+part of 'stats_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$OutfitDaoMixin on DatabaseAccessor<AppDatabase> {
-  $OutfitsTable get outfits => attachedDatabase.outfits;
+mixin _$StatsDaoMixin on DatabaseAccessor<AppDatabase> {
   $ClothingItemsTable get clothingItems => attachedDatabase.clothingItems;
+  $OutfitsTable get outfits => attachedDatabase.outfits;
   $OutfitItemsTable get outfitItems => attachedDatabase.outfitItems;
   $OutfitUsagesTable get outfitUsages => attachedDatabase.outfitUsages;
 }

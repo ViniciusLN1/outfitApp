@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
+import '../../models/item_color.dart';
 import '../../services/background_removal_service.dart';
 import '../../services/image_storage_service.dart';
 
@@ -27,6 +28,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
 
   final _nameController = TextEditingController();
   String _selectedCategory = ClothingCategory.camisa.name;
+  String? _selectedColor;
 
   @override
   void dispose() {
@@ -135,6 +137,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
             name: name,
             imagePath: path,
             category: _selectedCategory,
+            color: _selectedColor,
           );
       if (mounted) {
         setState(() {
@@ -144,6 +147,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
           _cameraController = null;
           _nameController.clear();
           _selectedCategory = ClothingCategory.camisa.name;
+          _selectedColor = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Peça salva com sucesso!')),
@@ -162,6 +166,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
       _finalImage = null;
       _nameController.clear();
       _selectedCategory = ClothingCategory.camisa.name;
+      _selectedColor = null;
     });
   }
 
@@ -312,6 +317,39 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
                                 child: Text(c.displayName),
                               ))
                           .toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Cor (opcional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: _selectedColor,
+                      isDense: true,
+                      isExpanded: true,
+                      onChanged: (v) => setState(() => _selectedColor = v),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Sem cor'),
+                        ),
+                        ...kItemColors.entries.map(
+                          (e) => DropdownMenuItem<String?>(
+                            value: e.key,
+                            child: Row(
+                              children: [
+                                ColorDot(color: e.value),
+                                const SizedBox(width: 10),
+                                Text(colorLabel(e.key)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

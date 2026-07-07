@@ -49,6 +49,15 @@ class $ClothingItemsTable extends ClothingItems
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _dateAddedMeta = const VerificationMeta(
     'dateAdded',
   );
@@ -66,6 +75,7 @@ class $ClothingItemsTable extends ClothingItems
     name,
     imagePath,
     category,
+    color,
     dateAdded,
   ];
   @override
@@ -109,6 +119,12 @@ class $ClothingItemsTable extends ClothingItems
     } else if (isInserting) {
       context.missing(_categoryMeta);
     }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
     if (data.containsKey('date_added')) {
       context.handle(
         _dateAddedMeta,
@@ -142,6 +158,10 @@ class $ClothingItemsTable extends ClothingItems
         DriftSqlType.string,
         data['${effectivePrefix}category'],
       )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
       dateAdded: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}date_added'],
@@ -160,12 +180,14 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
   final String name;
   final String imagePath;
   final String category;
+  final String? color;
   final int dateAdded;
   const ClothingItem({
     required this.id,
     required this.name,
     required this.imagePath,
     required this.category,
+    this.color,
     required this.dateAdded,
   });
   @override
@@ -175,6 +197,9 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
     map['name'] = Variable<String>(name);
     map['image_path'] = Variable<String>(imagePath);
     map['category'] = Variable<String>(category);
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
     map['date_added'] = Variable<int>(dateAdded);
     return map;
   }
@@ -185,6 +210,9 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
       name: Value(name),
       imagePath: Value(imagePath),
       category: Value(category),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
       dateAdded: Value(dateAdded),
     );
   }
@@ -199,6 +227,7 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
       name: serializer.fromJson<String>(json['name']),
       imagePath: serializer.fromJson<String>(json['imagePath']),
       category: serializer.fromJson<String>(json['category']),
+      color: serializer.fromJson<String?>(json['color']),
       dateAdded: serializer.fromJson<int>(json['dateAdded']),
     );
   }
@@ -210,6 +239,7 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
       'name': serializer.toJson<String>(name),
       'imagePath': serializer.toJson<String>(imagePath),
       'category': serializer.toJson<String>(category),
+      'color': serializer.toJson<String?>(color),
       'dateAdded': serializer.toJson<int>(dateAdded),
     };
   }
@@ -219,12 +249,14 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
     String? name,
     String? imagePath,
     String? category,
+    Value<String?> color = const Value.absent(),
     int? dateAdded,
   }) => ClothingItem(
     id: id ?? this.id,
     name: name ?? this.name,
     imagePath: imagePath ?? this.imagePath,
     category: category ?? this.category,
+    color: color.present ? color.value : this.color,
     dateAdded: dateAdded ?? this.dateAdded,
   );
   ClothingItem copyWithCompanion(ClothingItemsCompanion data) {
@@ -233,6 +265,7 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
       name: data.name.present ? data.name.value : this.name,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       category: data.category.present ? data.category.value : this.category,
+      color: data.color.present ? data.color.value : this.color,
       dateAdded: data.dateAdded.present ? data.dateAdded.value : this.dateAdded,
     );
   }
@@ -244,13 +277,15 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
           ..write('name: $name, ')
           ..write('imagePath: $imagePath, ')
           ..write('category: $category, ')
+          ..write('color: $color, ')
           ..write('dateAdded: $dateAdded')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, imagePath, category, dateAdded);
+  int get hashCode =>
+      Object.hash(id, name, imagePath, category, color, dateAdded);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -259,6 +294,7 @@ class ClothingItem extends DataClass implements Insertable<ClothingItem> {
           other.name == this.name &&
           other.imagePath == this.imagePath &&
           other.category == this.category &&
+          other.color == this.color &&
           other.dateAdded == this.dateAdded);
 }
 
@@ -267,6 +303,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
   final Value<String> name;
   final Value<String> imagePath;
   final Value<String> category;
+  final Value<String?> color;
   final Value<int> dateAdded;
   final Value<int> rowid;
   const ClothingItemsCompanion({
@@ -274,6 +311,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
     this.name = const Value.absent(),
     this.imagePath = const Value.absent(),
     this.category = const Value.absent(),
+    this.color = const Value.absent(),
     this.dateAdded = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -282,6 +320,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
     required String name,
     required String imagePath,
     required String category,
+    this.color = const Value.absent(),
     required int dateAdded,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -294,6 +333,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
     Expression<String>? name,
     Expression<String>? imagePath,
     Expression<String>? category,
+    Expression<String>? color,
     Expression<int>? dateAdded,
     Expression<int>? rowid,
   }) {
@@ -302,6 +342,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
       if (name != null) 'name': name,
       if (imagePath != null) 'image_path': imagePath,
       if (category != null) 'category': category,
+      if (color != null) 'color': color,
       if (dateAdded != null) 'date_added': dateAdded,
       if (rowid != null) 'rowid': rowid,
     });
@@ -312,6 +353,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
     Value<String>? name,
     Value<String>? imagePath,
     Value<String>? category,
+    Value<String?>? color,
     Value<int>? dateAdded,
     Value<int>? rowid,
   }) {
@@ -320,6 +362,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
       name: name ?? this.name,
       imagePath: imagePath ?? this.imagePath,
       category: category ?? this.category,
+      color: color ?? this.color,
       dateAdded: dateAdded ?? this.dateAdded,
       rowid: rowid ?? this.rowid,
     );
@@ -340,6 +383,9 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
     if (category.present) {
       map['category'] = Variable<String>(category.value);
     }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
     if (dateAdded.present) {
       map['date_added'] = Variable<int>(dateAdded.value);
     }
@@ -356,6 +402,7 @@ class ClothingItemsCompanion extends UpdateCompanion<ClothingItem> {
           ..write('name: $name, ')
           ..write('imagePath: $imagePath, ')
           ..write('category: $category, ')
+          ..write('color: $color, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -398,18 +445,6 @@ class $OutfitsTable extends Outfits with TableInfo<$OutfitsTable, Outfit> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
-  static const VerificationMeta _usageCountMeta = const VerificationMeta(
-    'usageCount',
-  );
-  @override
-  late final GeneratedColumn<int> usageCount = GeneratedColumn<int>(
-    'usage_count',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
   static const VerificationMeta _dateCreatedMeta = const VerificationMeta(
     'dateCreated',
   );
@@ -422,13 +457,7 @@ class $OutfitsTable extends Outfits with TableInfo<$OutfitsTable, Outfit> {
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    name,
-    isFavorite,
-    usageCount,
-    dateCreated,
-  ];
+  List<GeneratedColumn> get $columns => [id, name, isFavorite, dateCreated];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -458,12 +487,6 @@ class $OutfitsTable extends Outfits with TableInfo<$OutfitsTable, Outfit> {
       context.handle(
         _isFavoriteMeta,
         isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
-      );
-    }
-    if (data.containsKey('usage_count')) {
-      context.handle(
-        _usageCountMeta,
-        usageCount.isAcceptableOrUnknown(data['usage_count']!, _usageCountMeta),
       );
     }
     if (data.containsKey('date_created')) {
@@ -498,10 +521,6 @@ class $OutfitsTable extends Outfits with TableInfo<$OutfitsTable, Outfit> {
         DriftSqlType.int,
         data['${effectivePrefix}is_favorite'],
       )!,
-      usageCount: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}usage_count'],
-      )!,
       dateCreated: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}date_created'],
@@ -519,13 +538,11 @@ class Outfit extends DataClass implements Insertable<Outfit> {
   final String id;
   final String name;
   final int isFavorite;
-  final int usageCount;
   final int dateCreated;
   const Outfit({
     required this.id,
     required this.name,
     required this.isFavorite,
-    required this.usageCount,
     required this.dateCreated,
   });
   @override
@@ -534,7 +551,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['is_favorite'] = Variable<int>(isFavorite);
-    map['usage_count'] = Variable<int>(usageCount);
     map['date_created'] = Variable<int>(dateCreated);
     return map;
   }
@@ -544,7 +560,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
       id: Value(id),
       name: Value(name),
       isFavorite: Value(isFavorite),
-      usageCount: Value(usageCount),
       dateCreated: Value(dateCreated),
     );
   }
@@ -558,7 +573,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       isFavorite: serializer.fromJson<int>(json['isFavorite']),
-      usageCount: serializer.fromJson<int>(json['usageCount']),
       dateCreated: serializer.fromJson<int>(json['dateCreated']),
     );
   }
@@ -569,7 +583,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'isFavorite': serializer.toJson<int>(isFavorite),
-      'usageCount': serializer.toJson<int>(usageCount),
       'dateCreated': serializer.toJson<int>(dateCreated),
     };
   }
@@ -578,13 +591,11 @@ class Outfit extends DataClass implements Insertable<Outfit> {
     String? id,
     String? name,
     int? isFavorite,
-    int? usageCount,
     int? dateCreated,
   }) => Outfit(
     id: id ?? this.id,
     name: name ?? this.name,
     isFavorite: isFavorite ?? this.isFavorite,
-    usageCount: usageCount ?? this.usageCount,
     dateCreated: dateCreated ?? this.dateCreated,
   );
   Outfit copyWithCompanion(OutfitsCompanion data) {
@@ -594,9 +605,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
           : this.isFavorite,
-      usageCount: data.usageCount.present
-          ? data.usageCount.value
-          : this.usageCount,
       dateCreated: data.dateCreated.present
           ? data.dateCreated.value
           : this.dateCreated,
@@ -609,15 +617,13 @@ class Outfit extends DataClass implements Insertable<Outfit> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('isFavorite: $isFavorite, ')
-          ..write('usageCount: $usageCount, ')
           ..write('dateCreated: $dateCreated')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, isFavorite, usageCount, dateCreated);
+  int get hashCode => Object.hash(id, name, isFavorite, dateCreated);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -625,7 +631,6 @@ class Outfit extends DataClass implements Insertable<Outfit> {
           other.id == this.id &&
           other.name == this.name &&
           other.isFavorite == this.isFavorite &&
-          other.usageCount == this.usageCount &&
           other.dateCreated == this.dateCreated);
 }
 
@@ -633,14 +638,12 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
   final Value<String> id;
   final Value<String> name;
   final Value<int> isFavorite;
-  final Value<int> usageCount;
   final Value<int> dateCreated;
   final Value<int> rowid;
   const OutfitsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.isFavorite = const Value.absent(),
-    this.usageCount = const Value.absent(),
     this.dateCreated = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -648,7 +651,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
     required String id,
     required String name,
     this.isFavorite = const Value.absent(),
-    this.usageCount = const Value.absent(),
     required int dateCreated,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -658,7 +660,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<int>? isFavorite,
-    Expression<int>? usageCount,
     Expression<int>? dateCreated,
     Expression<int>? rowid,
   }) {
@@ -666,7 +667,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (isFavorite != null) 'is_favorite': isFavorite,
-      if (usageCount != null) 'usage_count': usageCount,
       if (dateCreated != null) 'date_created': dateCreated,
       if (rowid != null) 'rowid': rowid,
     });
@@ -676,7 +676,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
     Value<String>? id,
     Value<String>? name,
     Value<int>? isFavorite,
-    Value<int>? usageCount,
     Value<int>? dateCreated,
     Value<int>? rowid,
   }) {
@@ -684,7 +683,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
       id: id ?? this.id,
       name: name ?? this.name,
       isFavorite: isFavorite ?? this.isFavorite,
-      usageCount: usageCount ?? this.usageCount,
       dateCreated: dateCreated ?? this.dateCreated,
       rowid: rowid ?? this.rowid,
     );
@@ -702,9 +700,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
     if (isFavorite.present) {
       map['is_favorite'] = Variable<int>(isFavorite.value);
     }
-    if (usageCount.present) {
-      map['usage_count'] = Variable<int>(usageCount.value);
-    }
     if (dateCreated.present) {
       map['date_created'] = Variable<int>(dateCreated.value);
     }
@@ -720,7 +715,6 @@ class OutfitsCompanion extends UpdateCompanion<Outfit> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('isFavorite: $isFavorite, ')
-          ..write('usageCount: $usageCount, ')
           ..write('dateCreated: $dateCreated, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1137,12 +1131,328 @@ class OutfitItemsCompanion extends UpdateCompanion<OutfitItem> {
   }
 }
 
+class $OutfitUsagesTable extends OutfitUsages
+    with TableInfo<$OutfitUsagesTable, OutfitUsage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OutfitUsagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outfitIdMeta = const VerificationMeta(
+    'outfitId',
+  );
+  @override
+  late final GeneratedColumn<String> outfitId = GeneratedColumn<String>(
+    'outfit_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES outfits (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _usedAtMeta = const VerificationMeta('usedAt');
+  @override
+  late final GeneratedColumn<int> usedAt = GeneratedColumn<int>(
+    'used_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hasTimeMeta = const VerificationMeta(
+    'hasTime',
+  );
+  @override
+  late final GeneratedColumn<bool> hasTime = GeneratedColumn<bool>(
+    'has_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_time" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, outfitId, usedAt, hasTime];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'outfit_usages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OutfitUsage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('outfit_id')) {
+      context.handle(
+        _outfitIdMeta,
+        outfitId.isAcceptableOrUnknown(data['outfit_id']!, _outfitIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_outfitIdMeta);
+    }
+    if (data.containsKey('used_at')) {
+      context.handle(
+        _usedAtMeta,
+        usedAt.isAcceptableOrUnknown(data['used_at']!, _usedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usedAtMeta);
+    }
+    if (data.containsKey('has_time')) {
+      context.handle(
+        _hasTimeMeta,
+        hasTime.isAcceptableOrUnknown(data['has_time']!, _hasTimeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  OutfitUsage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OutfitUsage(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      outfitId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}outfit_id'],
+      )!,
+      usedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}used_at'],
+      )!,
+      hasTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_time'],
+      )!,
+    );
+  }
+
+  @override
+  $OutfitUsagesTable createAlias(String alias) {
+    return $OutfitUsagesTable(attachedDatabase, alias);
+  }
+}
+
+class OutfitUsage extends DataClass implements Insertable<OutfitUsage> {
+  final String id;
+  final String outfitId;
+
+  /// Timestamp (ms) do uso. Quando [hasTime] é falso, representa só a data
+  /// (meia-noite local) e a hora não deve ser exibida.
+  final int usedAt;
+  final bool hasTime;
+  const OutfitUsage({
+    required this.id,
+    required this.outfitId,
+    required this.usedAt,
+    required this.hasTime,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['outfit_id'] = Variable<String>(outfitId);
+    map['used_at'] = Variable<int>(usedAt);
+    map['has_time'] = Variable<bool>(hasTime);
+    return map;
+  }
+
+  OutfitUsagesCompanion toCompanion(bool nullToAbsent) {
+    return OutfitUsagesCompanion(
+      id: Value(id),
+      outfitId: Value(outfitId),
+      usedAt: Value(usedAt),
+      hasTime: Value(hasTime),
+    );
+  }
+
+  factory OutfitUsage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OutfitUsage(
+      id: serializer.fromJson<String>(json['id']),
+      outfitId: serializer.fromJson<String>(json['outfitId']),
+      usedAt: serializer.fromJson<int>(json['usedAt']),
+      hasTime: serializer.fromJson<bool>(json['hasTime']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'outfitId': serializer.toJson<String>(outfitId),
+      'usedAt': serializer.toJson<int>(usedAt),
+      'hasTime': serializer.toJson<bool>(hasTime),
+    };
+  }
+
+  OutfitUsage copyWith({
+    String? id,
+    String? outfitId,
+    int? usedAt,
+    bool? hasTime,
+  }) => OutfitUsage(
+    id: id ?? this.id,
+    outfitId: outfitId ?? this.outfitId,
+    usedAt: usedAt ?? this.usedAt,
+    hasTime: hasTime ?? this.hasTime,
+  );
+  OutfitUsage copyWithCompanion(OutfitUsagesCompanion data) {
+    return OutfitUsage(
+      id: data.id.present ? data.id.value : this.id,
+      outfitId: data.outfitId.present ? data.outfitId.value : this.outfitId,
+      usedAt: data.usedAt.present ? data.usedAt.value : this.usedAt,
+      hasTime: data.hasTime.present ? data.hasTime.value : this.hasTime,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OutfitUsage(')
+          ..write('id: $id, ')
+          ..write('outfitId: $outfitId, ')
+          ..write('usedAt: $usedAt, ')
+          ..write('hasTime: $hasTime')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, outfitId, usedAt, hasTime);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OutfitUsage &&
+          other.id == this.id &&
+          other.outfitId == this.outfitId &&
+          other.usedAt == this.usedAt &&
+          other.hasTime == this.hasTime);
+}
+
+class OutfitUsagesCompanion extends UpdateCompanion<OutfitUsage> {
+  final Value<String> id;
+  final Value<String> outfitId;
+  final Value<int> usedAt;
+  final Value<bool> hasTime;
+  final Value<int> rowid;
+  const OutfitUsagesCompanion({
+    this.id = const Value.absent(),
+    this.outfitId = const Value.absent(),
+    this.usedAt = const Value.absent(),
+    this.hasTime = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OutfitUsagesCompanion.insert({
+    required String id,
+    required String outfitId,
+    required int usedAt,
+    this.hasTime = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       outfitId = Value(outfitId),
+       usedAt = Value(usedAt);
+  static Insertable<OutfitUsage> custom({
+    Expression<String>? id,
+    Expression<String>? outfitId,
+    Expression<int>? usedAt,
+    Expression<bool>? hasTime,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (outfitId != null) 'outfit_id': outfitId,
+      if (usedAt != null) 'used_at': usedAt,
+      if (hasTime != null) 'has_time': hasTime,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OutfitUsagesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? outfitId,
+    Value<int>? usedAt,
+    Value<bool>? hasTime,
+    Value<int>? rowid,
+  }) {
+    return OutfitUsagesCompanion(
+      id: id ?? this.id,
+      outfitId: outfitId ?? this.outfitId,
+      usedAt: usedAt ?? this.usedAt,
+      hasTime: hasTime ?? this.hasTime,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (outfitId.present) {
+      map['outfit_id'] = Variable<String>(outfitId.value);
+    }
+    if (usedAt.present) {
+      map['used_at'] = Variable<int>(usedAt.value);
+    }
+    if (hasTime.present) {
+      map['has_time'] = Variable<bool>(hasTime.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OutfitUsagesCompanion(')
+          ..write('id: $id, ')
+          ..write('outfitId: $outfitId, ')
+          ..write('usedAt: $usedAt, ')
+          ..write('hasTime: $hasTime, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ClothingItemsTable clothingItems = $ClothingItemsTable(this);
   late final $OutfitsTable outfits = $OutfitsTable(this);
   late final $OutfitItemsTable outfitItems = $OutfitItemsTable(this);
+  late final $OutfitUsagesTable outfitUsages = $OutfitUsagesTable(this);
   late final Index idxClothingItemsCategory = Index(
     'idx_clothing_items_category',
     'CREATE INDEX idx_clothing_items_category ON clothing_items (category)',
@@ -1159,16 +1469,22 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_outfits_favorite_date',
     'CREATE INDEX idx_outfits_favorite_date ON outfits (is_favorite, date_created)',
   );
-  late final Index idxOutfitsUsageDate = Index(
-    'idx_outfits_usage_date',
-    'CREATE INDEX idx_outfits_usage_date ON outfits (usage_count, date_created)',
-  );
   late final Index idxOutfitItemsItemId = Index(
     'idx_outfit_items_item_id',
     'CREATE INDEX idx_outfit_items_item_id ON outfit_items (item_id)',
   );
+  late final Index idxOutfitUsagesOutfitId = Index(
+    'idx_outfit_usages_outfit_id',
+    'CREATE INDEX idx_outfit_usages_outfit_id ON outfit_usages (outfit_id)',
+  );
+  late final Index idxOutfitUsagesUsedAt = Index(
+    'idx_outfit_usages_used_at',
+    'CREATE INDEX idx_outfit_usages_used_at ON outfit_usages (used_at)',
+  );
   late final ClothingDao clothingDao = ClothingDao(this as AppDatabase);
   late final OutfitDao outfitDao = OutfitDao(this as AppDatabase);
+  late final UsageDao usageDao = UsageDao(this as AppDatabase);
+  late final StatsDao statsDao = StatsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1177,12 +1493,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clothingItems,
     outfits,
     outfitItems,
+    outfitUsages,
     idxClothingItemsCategory,
     idxClothingItemsDateAdded,
     idxOutfitsDateCreated,
     idxOutfitsFavoriteDate,
-    idxOutfitsUsageDate,
     idxOutfitItemsItemId,
+    idxOutfitUsagesOutfitId,
+    idxOutfitUsagesUsedAt,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1200,6 +1518,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('outfit_items', kind: UpdateKind.delete)],
     ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'outfits',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('outfit_usages', kind: UpdateKind.delete)],
+    ),
   ]);
 }
 
@@ -1209,6 +1534,7 @@ typedef $$ClothingItemsTableCreateCompanionBuilder =
       required String name,
       required String imagePath,
       required String category,
+      Value<String?> color,
       required int dateAdded,
       Value<int> rowid,
     });
@@ -1218,6 +1544,7 @@ typedef $$ClothingItemsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> imagePath,
       Value<String> category,
+      Value<String?> color,
       Value<int> dateAdded,
       Value<int> rowid,
     });
@@ -1275,6 +1602,11 @@ class $$ClothingItemsTableFilterComposer
 
   ColumnFilters<String> get category => $composableBuilder(
     column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1338,6 +1670,11 @@ class $$ClothingItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get dateAdded => $composableBuilder(
     column: $table.dateAdded,
     builder: (column) => ColumnOrderings(column),
@@ -1364,6 +1701,9 @@ class $$ClothingItemsTableAnnotationComposer
 
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
 
   GeneratedColumn<int> get dateAdded =>
       $composableBuilder(column: $table.dateAdded, builder: (column) => column);
@@ -1426,6 +1766,7 @@ class $$ClothingItemsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> imagePath = const Value.absent(),
                 Value<String> category = const Value.absent(),
+                Value<String?> color = const Value.absent(),
                 Value<int> dateAdded = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClothingItemsCompanion(
@@ -1433,6 +1774,7 @@ class $$ClothingItemsTableTableManager
                 name: name,
                 imagePath: imagePath,
                 category: category,
+                color: color,
                 dateAdded: dateAdded,
                 rowid: rowid,
               ),
@@ -1442,6 +1784,7 @@ class $$ClothingItemsTableTableManager
                 required String name,
                 required String imagePath,
                 required String category,
+                Value<String?> color = const Value.absent(),
                 required int dateAdded,
                 Value<int> rowid = const Value.absent(),
               }) => ClothingItemsCompanion.insert(
@@ -1449,6 +1792,7 @@ class $$ClothingItemsTableTableManager
                 name: name,
                 imagePath: imagePath,
                 category: category,
+                color: color,
                 dateAdded: dateAdded,
                 rowid: rowid,
               ),
@@ -1513,7 +1857,6 @@ typedef $$OutfitsTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<int> isFavorite,
-      Value<int> usageCount,
       required int dateCreated,
       Value<int> rowid,
     });
@@ -1522,7 +1865,6 @@ typedef $$OutfitsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<int> isFavorite,
-      Value<int> usageCount,
       Value<int> dateCreated,
       Value<int> rowid,
     });
@@ -1544,6 +1886,24 @@ final class $$OutfitsTableReferences
     ).filter((f) => f.outfitId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_outfitItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$OutfitUsagesTable, List<OutfitUsage>>
+  _outfitUsagesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.outfitUsages,
+    aliasName: $_aliasNameGenerator(db.outfits.id, db.outfitUsages.outfitId),
+  );
+
+  $$OutfitUsagesTableProcessedTableManager get outfitUsagesRefs {
+    final manager = $$OutfitUsagesTableTableManager(
+      $_db,
+      $_db.outfitUsages,
+    ).filter((f) => f.outfitId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_outfitUsagesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -1574,11 +1934,6 @@ class $$OutfitsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get usageCount => $composableBuilder(
-    column: $table.usageCount,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get dateCreated => $composableBuilder(
     column: $table.dateCreated,
     builder: (column) => ColumnFilters(column),
@@ -1600,6 +1955,31 @@ class $$OutfitsTableFilterComposer
           }) => $$OutfitItemsTableFilterComposer(
             $db: $db,
             $table: $db.outfitItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> outfitUsagesRefs(
+    Expression<bool> Function($$OutfitUsagesTableFilterComposer f) f,
+  ) {
+    final $$OutfitUsagesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.outfitUsages,
+      getReferencedColumn: (t) => t.outfitId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OutfitUsagesTableFilterComposer(
+            $db: $db,
+            $table: $db.outfitUsages,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1634,11 +2014,6 @@ class $$OutfitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get usageCount => $composableBuilder(
-    column: $table.usageCount,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get dateCreated => $composableBuilder(
     column: $table.dateCreated,
     builder: (column) => ColumnOrderings(column),
@@ -1662,11 +2037,6 @@ class $$OutfitsTableAnnotationComposer
 
   GeneratedColumn<int> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get usageCount => $composableBuilder(
-    column: $table.usageCount,
     builder: (column) => column,
   );
 
@@ -1699,6 +2069,31 @@ class $$OutfitsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> outfitUsagesRefs<T extends Object>(
+    Expression<T> Function($$OutfitUsagesTableAnnotationComposer a) f,
+  ) {
+    final $$OutfitUsagesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.outfitUsages,
+      getReferencedColumn: (t) => t.outfitId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OutfitUsagesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.outfitUsages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$OutfitsTableTableManager
@@ -1714,7 +2109,7 @@ class $$OutfitsTableTableManager
           $$OutfitsTableUpdateCompanionBuilder,
           (Outfit, $$OutfitsTableReferences),
           Outfit,
-          PrefetchHooks Function({bool outfitItemsRefs})
+          PrefetchHooks Function({bool outfitItemsRefs, bool outfitUsagesRefs})
         > {
   $$OutfitsTableTableManager(_$AppDatabase db, $OutfitsTable table)
     : super(
@@ -1732,14 +2127,12 @@ class $$OutfitsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<int> isFavorite = const Value.absent(),
-                Value<int> usageCount = const Value.absent(),
                 Value<int> dateCreated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutfitsCompanion(
                 id: id,
                 name: name,
                 isFavorite: isFavorite,
-                usageCount: usageCount,
                 dateCreated: dateCreated,
                 rowid: rowid,
               ),
@@ -1748,14 +2141,12 @@ class $$OutfitsTableTableManager
                 required String id,
                 required String name,
                 Value<int> isFavorite = const Value.absent(),
-                Value<int> usageCount = const Value.absent(),
                 required int dateCreated,
                 Value<int> rowid = const Value.absent(),
               }) => OutfitsCompanion.insert(
                 id: id,
                 name: name,
                 isFavorite: isFavorite,
-                usageCount: usageCount,
                 dateCreated: dateCreated,
                 rowid: rowid,
               ),
@@ -1767,35 +2158,63 @@ class $$OutfitsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({outfitItemsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (outfitItemsRefs) db.outfitItems],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (outfitItemsRefs)
-                    await $_getPrefetchedData<
-                      Outfit,
-                      $OutfitsTable,
-                      OutfitItem
-                    >(
-                      currentTable: table,
-                      referencedTable: $$OutfitsTableReferences
-                          ._outfitItemsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$OutfitsTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).outfitItemsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.outfitId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({outfitItemsRefs = false, outfitUsagesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (outfitItemsRefs) db.outfitItems,
+                    if (outfitUsagesRefs) db.outfitUsages,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (outfitItemsRefs)
+                        await $_getPrefetchedData<
+                          Outfit,
+                          $OutfitsTable,
+                          OutfitItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$OutfitsTableReferences
+                              ._outfitItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$OutfitsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).outfitItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.outfitId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (outfitUsagesRefs)
+                        await $_getPrefetchedData<
+                          Outfit,
+                          $OutfitsTable,
+                          OutfitUsage
+                        >(
+                          currentTable: table,
+                          referencedTable: $$OutfitsTableReferences
+                              ._outfitUsagesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$OutfitsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).outfitUsagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.outfitId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1812,7 +2231,7 @@ typedef $$OutfitsTableProcessedTableManager =
       $$OutfitsTableUpdateCompanionBuilder,
       (Outfit, $$OutfitsTableReferences),
       Outfit,
-      PrefetchHooks Function({bool outfitItemsRefs})
+      PrefetchHooks Function({bool outfitItemsRefs, bool outfitUsagesRefs})
     >;
 typedef $$OutfitItemsTableCreateCompanionBuilder =
     OutfitItemsCompanion Function({
@@ -2240,6 +2659,306 @@ typedef $$OutfitItemsTableProcessedTableManager =
       OutfitItem,
       PrefetchHooks Function({bool outfitId, bool itemId})
     >;
+typedef $$OutfitUsagesTableCreateCompanionBuilder =
+    OutfitUsagesCompanion Function({
+      required String id,
+      required String outfitId,
+      required int usedAt,
+      Value<bool> hasTime,
+      Value<int> rowid,
+    });
+typedef $$OutfitUsagesTableUpdateCompanionBuilder =
+    OutfitUsagesCompanion Function({
+      Value<String> id,
+      Value<String> outfitId,
+      Value<int> usedAt,
+      Value<bool> hasTime,
+      Value<int> rowid,
+    });
+
+final class $$OutfitUsagesTableReferences
+    extends BaseReferences<_$AppDatabase, $OutfitUsagesTable, OutfitUsage> {
+  $$OutfitUsagesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $OutfitsTable _outfitIdTable(_$AppDatabase db) =>
+      db.outfits.createAlias(
+        $_aliasNameGenerator(db.outfitUsages.outfitId, db.outfits.id),
+      );
+
+  $$OutfitsTableProcessedTableManager get outfitId {
+    final $_column = $_itemColumn<String>('outfit_id')!;
+
+    final manager = $$OutfitsTableTableManager(
+      $_db,
+      $_db.outfits,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_outfitIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$OutfitUsagesTableFilterComposer
+    extends Composer<_$AppDatabase, $OutfitUsagesTable> {
+  $$OutfitUsagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasTime => $composableBuilder(
+    column: $table.hasTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$OutfitsTableFilterComposer get outfitId {
+    final $$OutfitsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outfitId,
+      referencedTable: $db.outfits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OutfitsTableFilterComposer(
+            $db: $db,
+            $table: $db.outfits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$OutfitUsagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $OutfitUsagesTable> {
+  $$OutfitUsagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get usedAt => $composableBuilder(
+    column: $table.usedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasTime => $composableBuilder(
+    column: $table.hasTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$OutfitsTableOrderingComposer get outfitId {
+    final $$OutfitsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outfitId,
+      referencedTable: $db.outfits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OutfitsTableOrderingComposer(
+            $db: $db,
+            $table: $db.outfits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$OutfitUsagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OutfitUsagesTable> {
+  $$OutfitUsagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get usedAt =>
+      $composableBuilder(column: $table.usedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasTime =>
+      $composableBuilder(column: $table.hasTime, builder: (column) => column);
+
+  $$OutfitsTableAnnotationComposer get outfitId {
+    final $$OutfitsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.outfitId,
+      referencedTable: $db.outfits,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OutfitsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.outfits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$OutfitUsagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OutfitUsagesTable,
+          OutfitUsage,
+          $$OutfitUsagesTableFilterComposer,
+          $$OutfitUsagesTableOrderingComposer,
+          $$OutfitUsagesTableAnnotationComposer,
+          $$OutfitUsagesTableCreateCompanionBuilder,
+          $$OutfitUsagesTableUpdateCompanionBuilder,
+          (OutfitUsage, $$OutfitUsagesTableReferences),
+          OutfitUsage,
+          PrefetchHooks Function({bool outfitId})
+        > {
+  $$OutfitUsagesTableTableManager(_$AppDatabase db, $OutfitUsagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OutfitUsagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OutfitUsagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OutfitUsagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> outfitId = const Value.absent(),
+                Value<int> usedAt = const Value.absent(),
+                Value<bool> hasTime = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OutfitUsagesCompanion(
+                id: id,
+                outfitId: outfitId,
+                usedAt: usedAt,
+                hasTime: hasTime,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String outfitId,
+                required int usedAt,
+                Value<bool> hasTime = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OutfitUsagesCompanion.insert(
+                id: id,
+                outfitId: outfitId,
+                usedAt: usedAt,
+                hasTime: hasTime,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$OutfitUsagesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({outfitId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (outfitId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.outfitId,
+                                referencedTable: $$OutfitUsagesTableReferences
+                                    ._outfitIdTable(db),
+                                referencedColumn: $$OutfitUsagesTableReferences
+                                    ._outfitIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$OutfitUsagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OutfitUsagesTable,
+      OutfitUsage,
+      $$OutfitUsagesTableFilterComposer,
+      $$OutfitUsagesTableOrderingComposer,
+      $$OutfitUsagesTableAnnotationComposer,
+      $$OutfitUsagesTableCreateCompanionBuilder,
+      $$OutfitUsagesTableUpdateCompanionBuilder,
+      (OutfitUsage, $$OutfitUsagesTableReferences),
+      OutfitUsage,
+      PrefetchHooks Function({bool outfitId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2250,4 +2969,6 @@ class $AppDatabaseManager {
       $$OutfitsTableTableManager(_db, _db.outfits);
   $$OutfitItemsTableTableManager get outfitItems =>
       $$OutfitItemsTableTableManager(_db, _db.outfitItems);
+  $$OutfitUsagesTableTableManager get outfitUsages =>
+      $$OutfitUsagesTableTableManager(_db, _db.outfitUsages);
 }

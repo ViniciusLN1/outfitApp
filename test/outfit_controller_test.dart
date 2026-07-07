@@ -73,7 +73,11 @@ void main() {
       placements: [(itemId: 'camisa-1', transform: t)],
     );
     await db.outfitDao.toggleFavorite(id, true);
-    await db.outfitDao.incrementUsage(id);
+    await db.usageDao.registerUsage(
+      outfitId: id,
+      when: DateTime.fromMillisecondsSinceEpoch(0),
+      hasTime: false,
+    );
 
     await controller().saveOutfit(
       name: 'Editado',
@@ -86,7 +90,8 @@ void main() {
         .getSingle();
     expect(outfit.name, 'Editado');
     expect(outfit.isFavorite, 1, reason: 'favorito deve ser preservado');
-    expect(outfit.usageCount, 1, reason: 'contador de uso deve ser preservado');
+    final total = await db.usageDao.watchTotalForOutfit(id).first;
+    expect(total, 1, reason: 'histórico de uso deve ser preservado');
 
     final placements = await db.watchOutfitPlacements(id).first;
     expect(placements.map((p) => p.item.id), ['calca-1']);

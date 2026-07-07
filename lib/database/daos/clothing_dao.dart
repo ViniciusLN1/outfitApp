@@ -24,9 +24,14 @@ class ClothingDao extends DatabaseAccessor<AppDatabase>
     String id, {
     required String name,
     required String category,
+    required String? color,
   }) =>
       (update(clothingItems)..where((t) => t.id.equals(id))).write(
-        ClothingItemsCompanion(name: Value(name), category: Value(category)),
+        ClothingItemsCompanion(
+          name: Value(name),
+          category: Value(category),
+          color: Value(color),
+        ),
       );
 
   Stream<List<ClothingItem>> watchRecent({int limit = 10}) =>

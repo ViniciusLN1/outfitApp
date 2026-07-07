@@ -45,6 +45,7 @@ class ClothingController extends _$ClothingController {
     required String name,
     required String imagePath,
     required String category,
+    String? color,
   }) async {
     final db = ref.read(appDatabaseProvider);
     await db.clothingDao.upsertItem(ClothingItemsCompanion(
@@ -52,6 +53,7 @@ class ClothingController extends _$ClothingController {
       name: Value(name),
       imagePath: Value(imagePath),
       category: Value(category),
+      color: Value(color),
       dateAdded: Value(DateTime.now().millisecondsSinceEpoch),
     ));
   }
@@ -60,9 +62,11 @@ class ClothingController extends _$ClothingController {
     required String id,
     required String name,
     required String category,
+    String? color,
   }) async {
     final db = ref.read(appDatabaseProvider);
-    await db.clothingDao.updateItem(id, name: name, category: category);
+    await db.clothingDao
+        .updateItem(id, name: name, category: category, color: color);
   }
 
   Future<void> deleteItem(String id) async {

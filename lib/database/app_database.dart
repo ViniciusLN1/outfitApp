@@ -9,8 +9,11 @@ import '../models/clothing_item.dart';
 import '../models/item_transform.dart';
 import '../models/outfit.dart';
 import '../models/outfit_item.dart';
+import '../models/outfit_usage.dart';
 import 'daos/clothing_dao.dart';
 import 'daos/outfit_dao.dart';
+import 'daos/stats_dao.dart';
+import 'daos/usage_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -21,9 +24,16 @@ class OutfitPlacement {
   const OutfitPlacement({required this.item, required this.transform});
 }
 
+/// Registro de uso resolvido com o look correspondente (para calendário/histórico).
+class UsageEntry {
+  final OutfitUsage usage;
+  final Outfit outfit;
+  const UsageEntry({required this.usage, required this.outfit});
+}
+
 @DriftDatabase(
-  tables: [ClothingItems, Outfits, OutfitItems],
-  daos: [ClothingDao, OutfitDao],
+  tables: [ClothingItems, Outfits, OutfitItems, OutfitUsages],
+  daos: [ClothingDao, OutfitDao, UsageDao, StatsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -31,7 +41,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,9 +62,19 @@ class AppDatabase extends _$AppDatabase {
             await m.createIndex(idxOutfitItemsItemId);
             await m.createIndex(idxOutfitsDateCreated);
             await m.createIndex(idxOutfitsFavoriteDate);
-            await m.createIndex(idxOutfitsUsageDate);
             await m.createIndex(idxClothingItemsCategory);
             await m.createIndex(idxClothingItemsDateAdded);
+          }
+          if (from < 5) {
+            await m.addColumn(clothingItems, clothingItems.color);
+            await m.createTable(outfitUsages);
+            await m.createIndex(idxOutfitUsagesOutfitId);
+            await m.createIndex(idxOutfitUsagesUsedAt);
+            // Remove o contador materializado: uso passa a ser derivado do
+            // histórico (outfit_usages). TableMigration recria a tabela sem a
+            // coluna usage_count (e seu índice antigo).
+            // ignore: experimental_member_use
+            await m.alterTable(TableMigration(outfits));
           }
         },
         beforeOpen: (details) async {
@@ -86,6 +106,26 @@ class AppDatabase extends _$AppDatabase {
                 : defaultTransformFor(item.category);
             return OutfitPlacement(item: item, transform: transform);
           }).toList(),
+        );
+  }
+
+  /// Registros de uso resolvidos com o look, do mais recente ao mais antigo.
+  /// Se [outfitId] for informado, filtra apenas aquele look.
+  Stream<List<UsageEntry>> watchUsageEntries({String? outfitId}) {
+    final query = select(outfitUsages).join([
+      innerJoin(outfits, outfits.id.equalsExp(outfitUsages.outfitId)),
+    ])
+      ..orderBy([OrderingTerm.desc(outfitUsages.usedAt)]);
+    if (outfitId != null) {
+      query.where(outfitUsages.outfitId.equals(outfitId));
+    }
+    return query.watch().map(
+          (rows) => rows
+              .map((r) => UsageEntry(
+                    usage: r.readTable(outfitUsages),
+                    outfit: r.readTable(outfits),
+                  ))
+              .toList(),
         );
   }
 }

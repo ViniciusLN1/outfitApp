@@ -7,6 +7,7 @@ class ClothingItems extends Table {
   TextColumn get name => text()();
   TextColumn get imagePath => text()();
   TextColumn get category => text()();
+  TextColumn get color => text().nullable()();
   IntColumn get dateAdded => integer()();
 
   @override

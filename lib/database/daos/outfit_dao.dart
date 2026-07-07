@@ -3,10 +3,11 @@ import 'package:drift/drift.dart';
 import '../app_database.dart';
 import '../../models/outfit.dart';
 import '../../models/outfit_item.dart';
+import '../../models/outfit_usage.dart';
 
 part 'outfit_dao.g.dart';
 
-@DriftAccessor(tables: [Outfits, OutfitItems])
+@DriftAccessor(tables: [Outfits, OutfitItems, OutfitUsages])
 class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
   OutfitDao(super.db);
 
@@ -26,13 +27,25 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
             ]))
           .watch();
 
-  Stream<List<Outfit>> watchMostUsed() =>
-      (select(outfits)
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.usageCount),
-              (t) => OrderingTerm.desc(t.dateCreated),
-            ]))
-          .watch();
+  /// "Mais usados" derivado do histórico: ordena pela contagem de registros em
+  /// outfit_usages (desc), com a data de criação como desempate.
+  Stream<List<Outfit>> watchMostUsed() {
+    final uses = outfitUsages.id.count();
+    final query = select(outfits).join([
+      leftOuterJoin(
+        outfitUsages,
+        outfitUsages.outfitId.equalsExp(outfits.id),
+      ),
+    ])
+      ..groupBy([outfits.id])
+      ..orderBy([
+        OrderingTerm.desc(uses),
+        OrderingTerm.desc(outfits.dateCreated),
+      ]);
+    return query.watch().map(
+          (rows) => rows.map((r) => r.readTable(outfits)).toList(),
+        );
+  }
 
   Future<void> upsertOutfit(OutfitsCompanion companion) =>
       into(outfits).insertOnConflictUpdate(companion);
@@ -53,11 +66,4 @@ class OutfitDao extends DatabaseAccessor<AppDatabase> with _$OutfitDaoMixin {
   Future<void> renameOutfit(String id, String name) =>
       (update(outfits)..where((t) => t.id.equals(id)))
           .write(OutfitsCompanion(name: Value(name)));
-
-  Future<void> incrementUsage(String id) =>
-      (update(outfits)..where((t) => t.id.equals(id))).write(
-        OutfitsCompanion.custom(
-          usageCount: outfits.usageCount + const Constant(1),
-        ),
-      );
 }
