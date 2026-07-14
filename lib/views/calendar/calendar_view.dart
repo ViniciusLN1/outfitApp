@@ -5,6 +5,8 @@ import '../../controllers/outfit_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../database/app_database.dart';
 import '../../utils/date_format.dart';
+import '../../widgets/async_section.dart';
+import '../../widgets/dialogs.dart';
 import 'register_usage_dialog.dart';
 
 class CalendarView extends ConsumerStatefulWidget {
@@ -92,8 +94,9 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
         onPressed: _pickOutfitAndRegister,
         child: const Icon(Icons.add),
       ),
-      body: entriesAsync.when(
-        data: (entries) {
+      body: AsyncSection(
+        value: entriesAsync,
+        builder: (entries) {
           final counts = <String, int>{};
           for (final e in entries) {
             final d = DateTime.fromMillisecondsSinceEpoch(e.usage.usedAt);
@@ -133,7 +136,7 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Text(
                   'Usos em ${formatDay(_selectedDay)}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               if (dayEntries.isEmpty)
@@ -146,8 +149,6 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
       ),
     );
   }
@@ -170,7 +171,6 @@ class _OutfitFilter extends StatelessWidget {
       child: InputDecorator(
         decoration: const InputDecoration(
           labelText: 'Filtrar',
-          border: OutlineInputBorder(),
           isDense: true,
         ),
         child: DropdownButtonHideUnderline(
@@ -215,13 +215,17 @@ class _MonthHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-          Text(
-            title,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            tooltip: 'Mês anterior',
+            onPressed: onPrev,
           ),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: 'Próximo mês',
+            onPressed: onNext,
+          ),
         ],
       ),
     );
@@ -305,17 +309,21 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Dia $day${count > 0 ? ', $count usos' : ''}',
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: selected ? scheme.primary.withValues(alpha: 0.10) : null,
+          color: selected ? scheme.surfaceContainerHighest : null,
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
             width: selected ? 1.4 : 1,
           ),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -349,6 +357,7 @@ class _DayCell extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -357,6 +366,23 @@ class _UsageTile extends StatelessWidget {
   final UsageEntry entry;
   final WidgetRef ref;
   const _UsageTile({required this.entry, required this.ref});
+
+  Future<void> _delete(BuildContext context) async {
+    final u = entry.usage;
+    await ref.read(usageControllerProvider.notifier).delete(u.id);
+    if (!context.mounted) return;
+    // Registro barato de restaurar: em vez de dialog de confirmação,
+    // oferece desfazer (re-registra o mesmo uso).
+    showUndoSnackBar(
+      context,
+      message: 'Uso de "${entry.outfit.name}" removido.',
+      onUndo: () => ref.read(usageControllerProvider.notifier).register(
+            outfitId: u.outfitId,
+            when: DateTime.fromMillisecondsSinceEpoch(u.usedAt),
+            hasTime: u.hasTime,
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,9 +394,9 @@ class _UsageTile extends StatelessWidget {
         u.hasTime ? formatUsage(u.usedAt, true) : 'Sem horário',
       ),
       trailing: IconButton(
+        tooltip: 'Remover uso',
         icon: const Icon(Icons.delete_outline),
-        onPressed: () =>
-            ref.read(usageControllerProvider.notifier).delete(u.id),
+        onPressed: () => _delete(context),
       ),
     );
   }

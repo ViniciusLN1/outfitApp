@@ -173,8 +173,22 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
   @override
   Widget build(BuildContext context) {
     if (_isProcessing && _finalImage == null && _uiState == _UiState.sourceSelection) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Removendo fundo…',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     if (_finalImage != null) return _buildPreviewForm();
@@ -183,6 +197,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
   }
 
   Widget _buildSourceSelection() {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Capturar Peça')),
       body: Center(
@@ -191,8 +206,18 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add_photo_alternate_outlined, size: 72, color: Colors.grey),
-              const SizedBox(height: 32),
+              Icon(Icons.add_photo_alternate_outlined,
+                  size: 64, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(height: 12),
+              Text('Nova peça', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 6),
+              Text(
+                'Fotografe a roupa ou escolha uma imagem da galeria.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -233,16 +258,27 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
           CameraPreview(controller),
+          // Overlay de câmera é inerentemente escuro (scrim sobre a foto);
+          // branco aqui é intencional e independe do tema.
           if (_isProcessing)
-            const ColoredBox(
-              color: Color(0x80000000),
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
+            ColoredBox(
+              color: scheme.scrim.withValues(alpha: 0.55),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text('Removendo fundo…',
+                        style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
             ),
           Positioned(
@@ -250,7 +286,9 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
             left: 16,
             child: SafeArea(
               child: IconButton(
-                style: IconButton.styleFrom(backgroundColor: Colors.black38),
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.scrim.withValues(alpha: 0.4),
+                ),
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: _reset,
               ),
@@ -284,9 +322,18 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
       body: Column(
         children: [
           Expanded(
-            child: Image.memory(
-              _finalImage!,
-              fit: BoxFit.contain,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Image.memory(
+                _finalImage!,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           Padding(
@@ -295,21 +342,16 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
               children: [
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome da peça',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Nome da peça'),
                 ),
                 const SizedBox(height: 12),
                 InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Categoria',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Categoria'),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedCategory,
                       isDense: true,
+                      isExpanded: true,
                       onChanged: (v) => setState(() => _selectedCategory = v!),
                       items: ClothingCategory.values
                           .map((c) => DropdownMenuItem(
@@ -322,10 +364,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
                 ),
                 const SizedBox(height: 12),
                 InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Cor (opcional)',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Cor (opcional)'),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String?>(
                       value: _selectedColor,

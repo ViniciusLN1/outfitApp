@@ -8,7 +8,11 @@ import '../../controllers/clothing_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../controllers/search_controller.dart';
 import '../../database/app_database.dart';
+import '../../utils/category_label.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/outfit_layout_preview.dart';
+import '../../widgets/section_label.dart';
+import '../outfits/detail_sheets.dart';
 
 /// Busca global por nome (peças e outfits): case-insensitive, parcial, instantânea.
 class SearchView extends ConsumerStatefulWidget {
@@ -75,22 +79,17 @@ class _SearchViewState extends ConsumerState<SearchView> {
   Widget _buildRecent() {
     final recent = ref.watch(recentSearchesProvider);
     if (recent.isEmpty) {
-      return const Center(
-        child: Text('Digite para buscar peças e outfits.'),
+      return const EmptyState(
+        icon: Icons.search,
+        title: 'Buscar no closet',
+        message: 'Digite para encontrar peças e outfits pelo nome.',
       );
     }
     return ListView(
       children: [
-        const Padding(
+        const SectionLabel(
+          'Buscas recentes',
           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'BUSCAS RECENTES',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
-          ),
         ),
         for (final term in recent)
           ListTile(
@@ -117,7 +116,16 @@ class _SearchViewState extends ConsumerState<SearchView> {
         const [];
 
     if (items.isEmpty && outfits.isEmpty) {
-      return const Center(child: Text('Nenhum resultado encontrado.'));
+      return EmptyState(
+        icon: Icons.search_off,
+        title: 'Nenhum resultado',
+        message: 'Nada com esse nome no seu closet.',
+        actionLabel: 'Limpar busca',
+        onAction: () {
+          _controller.clear();
+          setState(() => _query = '');
+        },
+      );
     }
 
     return ListView(
@@ -143,16 +151,9 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SectionLabel(
+      '$label · $count',
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
-      child: Text(
-        '${label.toUpperCase()} · $count',
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-        ),
-      ),
     );
   }
 }
@@ -170,7 +171,8 @@ class _ItemResultTile extends StatelessWidget {
         child: ExtendedImage.file(File(item.imagePath), fit: BoxFit.contain),
       ),
       title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(item.category),
+      subtitle: Text(catLabel(item.category)),
+      onTap: () => showItemDetailSheet(context, item),
     );
   }
 }
@@ -191,6 +193,7 @@ class _OutfitResultTile extends StatelessWidget {
         ),
       ),
       title: Text(outfit.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: () => showOutfitDetailSheet(context, outfit),
     );
   }
 }

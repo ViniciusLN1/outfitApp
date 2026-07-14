@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../controllers/constructor_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../controllers/stats_controller.dart';
 import '../../database/daos/stats_dao.dart';
 import '../../models/item_color.dart';
+import '../../utils/category_label.dart';
 import '../../utils/date_format.dart';
+import '../../widgets/async_section.dart';
+import '../../widgets/kpi_tile.dart';
+import '../../widgets/section_label.dart';
 import 'stat_widgets.dart';
-
-String catLabel(String name) {
-  final match = ClothingCategory.values.where((c) => c.name == name);
-  return match.isEmpty ? name : match.first.displayName;
-}
 
 class StatsView extends ConsumerWidget {
   const StatsView({super.key});
@@ -39,17 +37,17 @@ class StatsView extends ConsumerWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 1.5,
               children: [
-                MetricTile(
+                KpiTile(
                     value: '$items',
                     label: 'Peças',
                     icon: Icons.checkroom),
-                MetricTile(
+                KpiTile(
                     value: '$outfits', label: 'Outfits', icon: Icons.style),
-                MetricTile(
+                KpiTile(
                     value: '$categories',
                     label: 'Categorias',
                     icon: Icons.category_outlined),
-                MetricTile(
+                KpiTile(
                     value: '$colors',
                     label: 'Cores',
                     icon: Icons.palette_outlined),
@@ -81,17 +79,10 @@ class StatsView extends ConsumerWidget {
     String Function(String)? labelFor,
     Color Function(String)? colorFor,
   }) {
-    return async.when(
-      data: (data) =>
+    return AsyncSection(
+      value: async,
+      builder: (data) =>
           BarList(entries: data, labelFor: labelFor, colorFor: colorFor),
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Erro: $e'),
-      ),
     );
   }
 
@@ -99,16 +90,9 @@ class StatsView extends ConsumerWidget {
     AsyncValue<List<ItemStat>> async, {
     String Function(ItemStat)? badge,
   }) {
-    return async.when(
-      data: (data) => ItemThumbStrip(items: data, badge: badge),
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Erro: $e'),
-      ),
+    return AsyncSection(
+      value: async,
+      builder: (data) => ItemThumbStrip(items: data, badge: badge),
     );
   }
 }

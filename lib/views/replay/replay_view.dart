@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/stats_controller.dart';
 import '../../database/daos/stats_dao.dart';
 import '../../models/item_color.dart';
+import '../../utils/category_label.dart';
 import '../../utils/date_format.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/async_section.dart';
+import '../../widgets/section_label.dart';
 import '../stats/stat_widgets.dart';
-import '../stats/stats_view.dart' show catLabel;
 
 class ReplayView extends ConsumerWidget {
   const ReplayView({super.key});
@@ -100,16 +103,9 @@ class ReplayView extends ConsumerWidget {
     AsyncValue<List<LabelCount>> async, {
     String Function(String)? labelFor,
   }) {
-    return async.when(
-      data: (data) => BarList(entries: data, labelFor: labelFor),
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Erro: $e'),
-      ),
+    return AsyncSection(
+      value: async,
+      builder: (data) => BarList(entries: data, labelFor: labelFor),
     );
   }
 
@@ -117,22 +113,16 @@ class ReplayView extends ConsumerWidget {
     AsyncValue<List<ItemStat>> async, {
     String Function(ItemStat)? badge,
   }) {
-    return async.when(
-      data: (data) => ItemThumbStrip(items: data, badge: badge),
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Erro: $e'),
-      ),
+    return AsyncSection(
+      value: async,
+      builder: (data) => ItemThumbStrip(items: data, badge: badge),
     );
   }
 
   Widget _forgottenOutfits(AsyncValue<List<OutfitStat>> async) {
-    return async.when(
-      data: (data) {
+    return AsyncSection(
+      value: async,
+      builder: (data) {
         if (data.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -154,14 +144,6 @@ class ReplayView extends ConsumerWidget {
           ],
         );
       },
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Erro: $e'),
-      ),
     );
   }
 }
@@ -180,35 +162,32 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     final ratio = total == 0 ? 0.0 : (current / total).clamp(0.0, 1.0);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 14)),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: ratio.toDouble(),
-              minHeight: 10,
-              backgroundColor: scheme.surfaceContainerHighest,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Semantics(
+              label: '$title: $caption',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: ratio.toDouble(),
+                  minHeight: 10,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(caption,
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-        ],
+            const SizedBox(height: 8),
+            Text(caption,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant)),
+          ],
+        ),
       ),
     );
   }
@@ -250,25 +229,15 @@ class _FactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
+    final theme = Theme.of(context);
+    return AppCard(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(4),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
           ),
           const SizedBox(height: 8),
           Row(
@@ -282,8 +251,7 @@ class _FactCard extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium,
                 ),
               ),
             ],
@@ -291,8 +259,8 @@ class _FactCard extends StatelessWidget {
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(subtitle!,
-                style:
-                    TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant)),
           ],
         ],
       ),

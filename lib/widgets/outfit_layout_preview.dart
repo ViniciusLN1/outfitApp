@@ -117,7 +117,13 @@ class OutfitLayoutPreview extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => const SizedBox.shrink(),
+      error: (e, _) => Center(
+        child: Icon(
+          Icons.broken_image_outlined,
+          size: 40,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

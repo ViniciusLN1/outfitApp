@@ -66,13 +66,31 @@ class AppDatabase extends _$AppDatabase {
             await m.createIndex(idxClothingItemsDateAdded);
           }
           if (from < 5) {
-            await m.addColumn(clothingItems, clothingItems.color);
+            // Guarda contra migração anterior interrompida no meio (o ALTER
+            // TABLE já aplicado não é revertido pelo SQLite).
+            final hasColor = (await customSelect(
+              "SELECT 1 FROM pragma_table_info('clothing_items') "
+              "WHERE name = 'color'",
+            ).get())
+                .isNotEmpty;
+            if (!hasColor) {
+              await m.addColumn(clothingItems, clothingItems.color);
+            }
             await m.createTable(outfitUsages);
-            await m.createIndex(idxOutfitUsagesOutfitId);
-            await m.createIndex(idxOutfitUsagesUsedAt);
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_outfit_usages_outfit_id '
+              'ON outfit_usages (outfit_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_outfit_usages_used_at '
+              'ON outfit_usages (used_at)',
+            );
             // Remove o contador materializado: uso passa a ser derivado do
             // histórico (outfit_usages). TableMigration recria a tabela sem a
             // coluna usage_count (e seu índice antigo).
+            await customStatement(
+              'DROP INDEX IF EXISTS idx_outfits_usage_date',
+            );
             // ignore: experimental_member_use
             await m.alterTable(TableMigration(outfits));
           }

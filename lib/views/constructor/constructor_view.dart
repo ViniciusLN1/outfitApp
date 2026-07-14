@@ -7,8 +7,12 @@ import 'package:gal/gal.dart';
 
 import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
+import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
+import '../../widgets/async_section.dart';
+import '../../widgets/dialogs.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/outfit_layout_preview.dart';
 import 'outfit_adjust_view.dart';
 
@@ -33,6 +37,15 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
   }
 
   Future<void> _showSaveDialog(ConstructorState canvas) async {
+    if (canvas.occupied.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Adicione pelo menos uma peça antes de salvar o outfit.'),
+        ),
+      );
+      return;
+    }
     final isEditing = canvas.editingOutfitId != null;
     final nameController =
         TextEditingController(text: canvas.editingOutfitName ?? '');
@@ -189,8 +202,19 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
           IconButton(
             icon: const Icon(Icons.clear_all),
             tooltip: 'Limpar canvas',
-            onPressed: () =>
-                ref.read(constructorControllerProvider.notifier).clearAll(),
+            onPressed: () async {
+              if (canvas.occupied.isEmpty) return;
+              final ok = await confirmDialog(
+                context,
+                title: 'Limpar canvas',
+                message: 'Remover todas as peças do look em montagem?',
+                confirmLabel: 'Limpar',
+                destructive: true,
+              );
+              if (ok) {
+                ref.read(constructorControllerProvider.notifier).clearAll();
+              }
+            },
           ),
         ],
       ),
@@ -213,12 +237,9 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
                   label: const Text('Ajustar'),
                 ),
                 const SizedBox(width: 12),
-                SizedBox(
-                  width: 170,
-                  child: ElevatedButton(
-                    onPressed: () => _showSaveDialog(canvas),
-                    child: const Text('Salvar Outfit'),
-                  ),
+                ElevatedButton(
+                  onPressed: () => _showSaveDialog(canvas),
+                  child: const Text('Salvar Outfit'),
                 ),
               ],
             ),
@@ -231,86 +252,92 @@ class _ConstructorViewState extends ConsumerState<ConstructorView> {
   Widget _buildCanvas(ConstructorState canvas) {
     // Eixo central vertical e simétrico: chapéu, camisa, cinto, calça, sapato.
     // Acessórios à esquerda da camisa; Blusa/Jaqueta à direita.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Center(
-          child: SizedBox(
-            width: 150,
-            child: _Slot(
-              category: ClothingCategory.chapeu,
-              item: canvas.items[ClothingCategory.chapeu],
-              height: 72,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+    // Larguras proporcionais ao espaço disponível (responsivo).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth.clamp(0.0, 420.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              flex: 3,
-              child: _Slot(
-                category: ClothingCategory.acessorios,
-                item: canvas.items[ClothingCategory.acessorios],
-                height: 96,
+            Center(
+              child: SizedBox(
+                width: w * 0.44,
+                child: _Slot(
+                  category: ClothingCategory.chapeu,
+                  item: canvas.items[ClothingCategory.chapeu],
+                  height: 72,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 4,
-              child: _Slot(
-                category: ClothingCategory.camisa,
-                item: canvas.items[ClothingCategory.camisa],
-                height: 144,
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: _Slot(
+                    category: ClothingCategory.acessorios,
+                    item: canvas.items[ClothingCategory.acessorios],
+                    height: 96,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 4,
+                  child: _Slot(
+                    category: ClothingCategory.camisa,
+                    item: canvas.items[ClothingCategory.camisa],
+                    height: 144,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: _Slot(
+                    category: ClothingCategory.blusa,
+                    item: canvas.items[ClothingCategory.blusa],
+                    height: 96,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: SizedBox(
+                width: w * 0.58,
+                child: _Slot(
+                  category: ClothingCategory.cinto,
+                  item: canvas.items[ClothingCategory.cinto],
+                  height: 54,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 3,
-              child: _Slot(
-                category: ClothingCategory.blusa,
-                item: canvas.items[ClothingCategory.blusa],
-                height: 96,
+            const SizedBox(height: 10),
+            Center(
+              child: SizedBox(
+                width: w * 0.55,
+                child: _Slot(
+                  category: ClothingCategory.calca,
+                  item: canvas.items[ClothingCategory.calca],
+                  height: 150,
+                ),
               ),
             ),
+            const SizedBox(height: 10),
+            Center(
+              child: SizedBox(
+                width: w * 0.44,
+                child: _Slot(
+                  category: ClothingCategory.sapato,
+                  item: canvas.items[ClothingCategory.sapato],
+                  height: 78,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
           ],
-        ),
-        const SizedBox(height: 10),
-        Center(
-          child: SizedBox(
-            width: 200,
-            child: _Slot(
-              category: ClothingCategory.cinto,
-              item: canvas.items[ClothingCategory.cinto],
-              height: 54,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Center(
-          child: SizedBox(
-            width: 190,
-            child: _Slot(
-              category: ClothingCategory.calca,
-              item: canvas.items[ClothingCategory.calca],
-              height: 150,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Center(
-          child: SizedBox(
-            width: 150,
-            child: _Slot(
-              category: ClothingCategory.sapato,
-              item: canvas.items[ClothingCategory.sapato],
-              height: 78,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
+        );
+      },
     );
   }
 }
@@ -338,15 +365,15 @@ class _Slot extends ConsumerWidget {
             color: item != null
                 ? Theme.of(context).colorScheme.primary
                 : Theme.of(context).colorScheme.outlineVariant,
-            width: item != null ? 1.6 : 1,
+            width: item != null ? 1.4 : 1,
           ),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
           color: item != null
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.04)
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
               : null,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(7),
           child: item == null
               ? _EmptySlot(category: category)
               : _FilledSlot(item: item!),
@@ -368,59 +395,36 @@ class _EmptySlot extends StatelessWidget {
   final ClothingCategory category;
   const _EmptySlot({required this.category});
 
-  // Glifo semântico por categoria. Material Icons não tem peças de roupa
-  // específicas, então usamos emoji (universal e consistente) para as peças e
-  // reservamos um ícone Material apenas para o cinto, que não tem emoji.
-  static const _emojiMap = {
-    ClothingCategory.chapeu: '🧢',
-    ClothingCategory.camisa: '👕',
-    ClothingCategory.blusa: '🧥',
-    ClothingCategory.calca: '👖',
-    ClothingCategory.sapato: '👞',
-    ClothingCategory.acessorios: '⌚',
+  // Rótulo do placeholder em inglês (só no canvas do construtor).
+  static const _labels = {
+    ClothingCategory.chapeu: 'Hat',
+    ClothingCategory.camisa: 'Shirt',
+    ClothingCategory.blusa: 'Jacket',
+    ClothingCategory.cinto: 'Belt',
+    ClothingCategory.calca: 'Pants',
+    ClothingCategory.sapato: 'Shoes',
+    ClothingCategory.acessorios: 'Accessories',
   };
-  static const _fallbackIcon = Icons.horizontal_rule; // cinto
 
   @override
   Widget build(BuildContext context) {
-    final emoji = _emojiMap[category];
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        emoji != null
-            ? Opacity(
-                opacity: 0.12,
-                child: Text(emoji, style: const TextStyle(fontSize: 50)),
-              )
-            : Icon(_fallbackIcon, size: 56, color: muted.withValues(alpha: 0.12)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              emoji != null
-                  ? Text(emoji, style: const TextStyle(fontSize: 24))
-                  : Icon(_fallbackIcon, size: 26,
-                      color: muted.withValues(alpha: 0.7)),
-              const SizedBox(height: 4),
-              Text(
-                category.displayName,
-                style: TextStyle(
-                  color: muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+    return Semantics(
+      button: true,
+      label: 'Adicionar ${category.displayName}',
+      child: ExcludeSemantics(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              (_labels[category] ?? category.name).toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -431,37 +435,15 @@ class _FilledSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Slots laterais estreitos: exibe apenas a peça, centralizada.
-        if (constraints.maxWidth < 130) {
-          return Padding(
-            padding: const EdgeInsets.all(6),
-            child: ExtendedImage.file(
-              File(item.imagePath),
-              fit: BoxFit.contain,
-            ),
-          );
-        }
-        return Row(
-          children: [
-            ExtendedImage.file(
-              File(item.imagePath),
-              width: 70,
-              fit: BoxFit.cover,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                item.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        );
-      },
+    // Padrão único para todos os slots: apenas a peça, centralizada.
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: ExtendedImage.file(
+          File(item.imagePath),
+          fit: BoxFit.contain,
+        ),
+      ),
     );
   }
 }
@@ -474,23 +456,42 @@ class _CategorySheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(clothingByCategoryProvider(category.name));
 
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.6,
       child: Column(
         children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: scheme.outlineVariant,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Text(
               category.displayName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
           Expanded(
-            child: itemsAsync.when(
-              data: (items) {
+            child: AsyncSection(
+              value: itemsAsync,
+              builder: (items) {
                 if (items.isEmpty) {
-                  return const Center(
-                    child: Text('Nenhuma peça nessa categoria.'),
+                  return EmptyState(
+                    icon: Icons.checkroom_outlined,
+                    title: 'Nada em ${category.displayName}',
+                    message:
+                        'Capture uma peça desta categoria para usá-la aqui.',
+                    actionLabel: 'Capturar peça',
+                    onAction: () {
+                      Navigator.pop(context);
+                      ref.read(currentTabIndexProvider.notifier).setTab(2);
+                    },
                   );
                 }
                 return GridView.builder(
@@ -503,29 +504,38 @@ class _CategorySheet extends ConsumerWidget {
                     mainAxisSpacing: 8,
                   ),
                   itemCount: items.length,
-                  itemBuilder: (_, i) => GestureDetector(
-                    onTap: () {
-                      ref
-                          .read(constructorControllerProvider.notifier)
-                          .selectItem(category, items[i]);
-                      Navigator.pop(context);
-                    },
-                    child: Card(
-                      clipBehavior: Clip.antiAlias,
+                  itemBuilder: (_, i) => Material(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        ref
+                            .read(constructorControllerProvider.notifier)
+                            .selectItem(category, items[i]);
+                        Navigator.pop(context);
+                      },
                       child: Column(
                         children: [
                           Expanded(
-                            child: ExtendedImage.file(
-                              File(items[i].imagePath),
-                              fit: BoxFit.cover,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: ExtendedImage.file(
+                                File(items[i].imagePath),
+                                fit: BoxFit.contain,
+                                width: double.infinity,
+                              ),
                             ),
                           ),
-                          Padding(
+                          Container(
+                            width: double.infinity,
+                            color: scheme.surface,
                             padding: const EdgeInsets.all(4),
                             child: Text(
                               items[i].name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
@@ -535,8 +545,6 @@ class _CategorySheet extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('$e')),
             ),
           ),
         ],

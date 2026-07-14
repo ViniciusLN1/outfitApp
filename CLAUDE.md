@@ -22,12 +22,34 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 
 ---
 
-## 3. Design System & Regras Visuais
+## 3. Design System & Regras Visuais — "Lookbook de Atelier"
+
+As fotos das peças (PNGs transparentes) são as protagonistas; a UI é a galeria. Tema centralizado em `lib/theme/app_theme.dart` (`buildAppTheme(brightness)`).
 
 ### Paleta de Cores
-- **Primárias:** Branco e Azul Escuro.
-- **Tema:** O app suporta Tema Claro e Tema Escuro, alternáveis na **Aba 5 (Perfil)**. Usar `ThemeMode` do Flutter gerenciado por estado global (ex: Provider ou Riverpod).
-- **Favorito:** Ícone de **Estrela** (substitui coração). Estrela **amarela** quando ativo, cinza/contornada quando inativo.
+- **Light:** Ink `#201D1A` (texto) · Porcelain `#FAF8F5` (fundo) · Greige `#EEEAE3` (pranchas/superfícies) · Hairline `#E3DDD3` (linhas) · **Oxblood `#6E2B3A` (primary)** · Moss `#66705B` (secondary).
+- **Dark (espresso quente):** scaffold `#16130F`, surface `#211D18`, container `#2C2620`, texto Bone `#F0EBE2`, primary Rosewood `#D08E9C`.
+- Nunca usar `Colors.*` hardcoded — sempre tokens do `colorScheme` (deletes = `scheme.error`).
+- **Tema:** Claro/Escuro alternáveis na **Aba 5 (Perfil)** via `ThemeMode` global (Riverpod).
+- **Favorito:** Ícone de **Estrela**. Estrela **amarela** quando ativo, cinza/contornada quando inativo.
+
+### Tipografia
+- **Marcellus** (romana lapidar, peso único 400): display, headlines, títulos de tela/AppBar, números de KPI. Hierarquia por corpo e letterSpacing, nunca por fontWeight.
+- **Outfit** (geométrica): corpo, botões, labels. Eyebrow de seção = `textTheme.labelSmall` (11sp w600 letterSpacing 2 uppercase).
+- Fontes empacotadas em `assets/fonts/` (sem fetch em runtime). Usar sempre `textTheme`, não `TextStyle` inline com tamanhos/pesos próprios.
+
+### Geometria & Efeitos
+- Cards/sheets/dialogs/inputs: radius **12**. Botões: **pill** (`StadiumBorder`). Chips: radius **2** (etiqueta de roupa).
+- `elevation: 0` global; sem gradientes/sombras. Profundidade por tom sobre tom (greige sobre porcelain), não por borda.
+
+### Componentes compartilhados (usar sempre; não recriar inline)
+- `lib/widgets/app_card.dart` — `AppCard` (`plate: true` = fundo greige para fotos de peças).
+- `lib/widgets/empty_state.dart` — `EmptyState` (ícone + título + mensagem + CTA opcional) para todo estado vazio.
+- `lib/widgets/async_section.dart` — `AsyncSection<T>` / `ErrorNotice` para `AsyncValue` (nunca expor `$e` na UI).
+- `lib/widgets/kpi_tile.dart` — `KpiTile` (métrica única do app).
+- `lib/widgets/section_label.dart` — `SectionLabel` (eyebrow).
+- `lib/widgets/dialogs.dart` — `confirmDialog` (destrutivo = `scheme.error`) e `showUndoSnackBar`.
+- `lib/utils/category_label.dart` — `catLabel` (nunca exibir enum cru de categoria).
 
 ### Layout Global
 - **Header:** Todas as abas possuem um header fino no topo com o título da aba centralizado.
@@ -138,11 +160,12 @@ Aplicativo mobile nativo para gerenciamento de guarda-roupa pessoal, catalogaç�
 
 ---
 
-## Design System (Editorial & Minimalist Aesthetic)
-- **Geometry:** Strict semi-sharp corners. Apply `BorderRadius.circular(4)` to all cards, buttons, inputs, and containers. Modals/bottom sheets use `BorderRadius.circular(6)`. Never use highly rounded or circular corners unless it is for avatars.
-- **Effects:** No artificial effects. Set `elevation: 0` globally. Do NOT use gradients or diffuse drop shadows. 
-- **Contrast & Styling:** Contrast must be achieved via fine borders (`outlineVariant`), font weights, and solid colors. Use explicit `letterSpacing` on titles and labels to maintain the editorial print look.
-- **Palette:** Deep Dark Blue (`#14213D`), Pure White, and Dark Background (`#0B1426`). Shared uniform layout language across Light/Dark modes via `_buildTheme(brightness)` in `app.dart`.
+## Design System ("Lookbook de Atelier")
+- **Geometry:** Cards/sheets/dialogs/inputs `BorderRadius.circular(12)`; buttons `StadiumBorder` (pill); chips `BorderRadius.circular(2)` (garment-tag look).
+- **Effects:** `elevation: 0` globally. No gradients or drop shadows. Depth via tone-on-tone (greige plates over porcelain background), not borders.
+- **Typography:** Marcellus (display/headlines/KPI numbers, single 400 weight — hierarchy via size/letterSpacing, never fontWeight) + Outfit (body/UI). Always use `textTheme` tokens; eyebrow = `labelSmall`.
+- **Palette:** Light: Ink `#201D1A`, Porcelain `#FAF8F5`, Greige `#EEEAE3`, Oxblood `#6E2B3A` (primary), Moss `#66705B`. Dark: warm espresso (`#16130F`/`#211D18`), Rosewood `#D08E9C` (primary). Theme lives in `lib/theme/app_theme.dart` (`buildAppTheme(brightness)`).
+- **Shared widgets (mandatory):** `AppCard`, `EmptyState`, `AsyncSection`/`ErrorNotice`, `KpiTile`, `SectionLabel`, `confirmDialog`/`showUndoSnackBar` in `lib/widgets/`; `catLabel` in `lib/utils/category_label.dart`.
 
 ---
 

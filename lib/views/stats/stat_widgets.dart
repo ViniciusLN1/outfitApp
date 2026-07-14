@@ -5,70 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../database/daos/stats_dao.dart';
 
-/// Rótulo editorial de seção.
-class SectionLabel extends StatelessWidget {
-  final String text;
-  const SectionLabel(this.text, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 22, 16, 8),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Cartão com valor grande + rótulo (KPI).
-class MetricTile extends StatelessWidget {
-  final String value;
-  final String label;
-  final IconData icon;
-  const MetricTile({
-    super.key,
-    required this.value,
-    required this.label,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      child: Column(
-        children: [
-          Icon(icon, size: 20, color: scheme.primary),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Lista de barras horizontais proporcionais a partir de [LabelCount].
 class BarList extends StatelessWidget {
   final List<LabelCount> entries;
@@ -100,7 +36,10 @@ class BarList extends StatelessWidget {
       child: Column(
         children: [
           for (final e in entries)
-            Padding(
+            Semantics(
+              label:
+                  '${labelFor?.call(e.label) ?? e.label}: ${e.count}',
+              child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
@@ -163,6 +102,7 @@ class BarList extends StatelessWidget {
                   ),
                 ],
               ),
+              ),
             ),
         ],
       ),
@@ -206,8 +146,8 @@ class ItemThumbStrip extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      border: Border.all(color: scheme.outlineVariant),
-                      borderRadius: BorderRadius.circular(4),
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     padding: const EdgeInsets.all(6),
                     child: ExtendedImage.file(
