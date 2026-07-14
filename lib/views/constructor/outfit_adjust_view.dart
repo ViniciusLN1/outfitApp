@@ -348,7 +348,11 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
     // A área de gesto cobre apenas o retângulo visível da imagem (BoxFit
     // .contain), não o quadrado invisível — as faixas transparentes do
     // quadrado deixam de bloquear o toque nas peças de baixo.
+    // Key por categoria: o z-bump reordena os filhos do Stack no meio do
+    // gesto; sem key o element é reciclado para outra peça e o arraste passa
+    // a mover a peça errada.
     return Positioned(
+      key: ValueKey(c),
       left: left,
       top: top,
       width: side,
@@ -356,10 +360,14 @@ class _OutfitAdjustViewState extends ConsumerState<OutfitAdjustView> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          IgnorePointer(
-            child: ExtendedImage.file(
-              File(_items[c]!.imagePath),
-              fit: BoxFit.contain,
+          // Positioned.fill dá constraints justas ao quadrado: o contain
+          // centraliza a imagem, igual ao preview salvo e ao export PNG.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ExtendedImage.file(
+                File(_items[c]!.imagePath),
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           Positioned(

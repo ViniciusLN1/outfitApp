@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class ImageStorageService {
@@ -22,6 +23,33 @@ class ImageStorageService {
     final trimmed = await trimTransparentBorder(bytes);
     await file.writeAsBytes(trimmed, flush: true);
     return file.path;
+  }
+
+  static const _trimFlagKey = 'images_trimmed_v1';
+
+  /// Migração one-shot: peças salvas antes do corte de margens transparentes
+  /// mantêm as bordas assimétricas do rembg, deixando a peça fora do centro do
+  /// próprio retângulo. Reprocessa cada PNG existente uma única vez.
+  static Future<void> trimExistingImages(SharedPreferences prefs) async {
+    if (prefs.getBool(_trimFlagKey) ?? false) return;
+    try {
+      final dir = await _ensureDir();
+      await for (final entry in dir.list()) {
+        if (entry is! File || !entry.path.endsWith('.png')) continue;
+        try {
+          final bytes = await entry.readAsBytes();
+          final trimmed = await trimTransparentBorder(bytes);
+          if (!identical(trimmed, bytes)) {
+            await entry.writeAsBytes(trimmed, flush: true);
+          }
+        } catch (_) {
+          // Uma imagem ilegível não interrompe as demais.
+        }
+      }
+      await prefs.setBool(_trimFlagKey, true);
+    } catch (_) {
+      // Sem flag gravada: tenta de novo no próximo startup.
+    }
   }
 
   Future<void> deleteImage(String path) async {
