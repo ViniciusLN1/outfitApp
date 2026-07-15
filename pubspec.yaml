@@ -41,6 +41,9 @@ dependencies:
   # Salvar imagem na galeria do dispositivo
   gal: ^1.3.1
 
+  # Zip do bundle de backup (banco + imagens)
+  archive: ^3.6.1
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -51,15 +54,13 @@ dev_dependencies:
   drift_dev: ^2.26.0
   riverpod_generator: ^2.6.1
   sqlite3: ^2.9.4
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true
 
   fonts:
-    - family: Marcellus
-      fonts:
-        - asset: assets/fonts/Marcellus-Regular.ttf
-          weight: 400
     - family: Outfit
       fonts:
         - asset: assets/fonts/Outfit-Regular.ttf

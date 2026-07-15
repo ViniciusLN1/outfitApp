@@ -34,8 +34,7 @@ As fotos das peças (PNGs transparentes) são as protagonistas; a UI é a galeri
 - **Favorito:** Ícone de **Estrela**. Estrela **amarela** quando ativo, cinza/contornada quando inativo.
 
 ### Tipografia
-- **Marcellus** (romana lapidar, peso único 400): display, headlines, títulos de tela/AppBar, números de KPI. Hierarquia por corpo e letterSpacing, nunca por fontWeight.
-- **Outfit** (geométrica): corpo, botões, labels. Eyebrow de seção = `textTheme.labelSmall` (11sp w600 letterSpacing 2 uppercase).
+- **Outfit** (geométrica) em tudo: display/headlines/títulos/KPI em **w600**, corpo/botões/labels em 400–600. Hierarquia por peso e corpo. Eyebrow de seção = `textTheme.labelSmall` (11sp w600 letterSpacing 2 uppercase).
 - Fontes empacotadas em `assets/fonts/` (sem fetch em runtime). Usar sempre `textTheme`, não `TextStyle` inline com tamanhos/pesos próprios.
 
 ### Geometria & Efeitos
@@ -163,7 +162,7 @@ As fotos das peças (PNGs transparentes) são as protagonistas; a UI é a galeri
 ## Design System ("Lookbook de Atelier")
 - **Geometry:** Cards/sheets/dialogs/inputs `BorderRadius.circular(12)`; buttons `StadiumBorder` (pill); chips `BorderRadius.circular(2)` (garment-tag look).
 - **Effects:** `elevation: 0` globally. No gradients or drop shadows. Depth via tone-on-tone (greige plates over porcelain background), not borders.
-- **Typography:** Marcellus (display/headlines/KPI numbers, single 400 weight — hierarchy via size/letterSpacing, never fontWeight) + Outfit (body/UI). Always use `textTheme` tokens; eyebrow = `labelSmall`.
+- **Typography:** Outfit only — display/headlines/KPI numbers at w600, body/UI at 400–600; hierarchy via weight and size. Always use `textTheme` tokens; eyebrow = `labelSmall`.
 - **Palette:** Light: Ink `#201D1A`, Porcelain `#FAF8F5`, Greige `#EEEAE3`, Oxblood `#6E2B3A` (primary), Moss `#66705B`. Dark: warm espresso (`#16130F`/`#211D18`), Rosewood `#D08E9C` (primary). Theme lives in `lib/theme/app_theme.dart` (`buildAppTheme(brightness)`).
 - **Shared widgets (mandatory):** `AppCard`, `EmptyState`, `AsyncSection`/`ErrorNotice`, `KpiTile`, `SectionLabel`, `confirmDialog`/`showUndoSnackBar` in `lib/widgets/`; `catLabel` in `lib/utils/category_label.dart`.
 
