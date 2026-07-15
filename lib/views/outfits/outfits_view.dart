@@ -9,7 +9,7 @@ import '../../controllers/constructor_controller.dart';
 import '../../controllers/nav_controller.dart';
 import '../../controllers/outfit_controller.dart';
 import '../../database/app_database.dart';
-import '../../services/image_storage_service.dart';
+import '../../services/user_scope.dart';
 import '../../utils/category_label.dart';
 import '../../widgets/async_section.dart';
 import '../../widgets/dialogs.dart';
@@ -55,7 +55,7 @@ class _OutfitsViewState extends ConsumerState<OutfitsView> {
     );
     if (confirmed && mounted) {
       await ref.read(clothingControllerProvider.notifier).deleteItem(item.id);
-      await ImageStorageService().deleteImage(item.imagePath);
+      await ref.read(imageStorageServiceProvider).deleteImage(item.imagePath);
     }
   }
 

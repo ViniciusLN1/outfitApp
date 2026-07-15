@@ -11,6 +11,7 @@ import '../../widgets/kpi_tile.dart';
 import '../calendar/calendar_view.dart';
 import '../replay/replay_view.dart';
 import '../stats/stats_view.dart';
+import 'account_section.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -51,6 +52,8 @@ class ProfileView extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 32),
+            const AccountSection(),
+            const SizedBox(height: 16),
             const _ProfileActions(),
             const SizedBox(height: 32),
             _ThemeToggle(isDark: isDark),

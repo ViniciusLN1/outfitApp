@@ -3,11 +3,19 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../services/user_scope.dart';
 
 part 'clothing_controller.g.dart';
 
 @Riverpod(keepAlive: true)
-AppDatabase appDatabase(AppDatabaseRef ref) => AppDatabase();
+AppDatabase appDatabase(AppDatabaseRef ref) {
+  // Trocar de usuário rebuilda este provider (e toda a árvore reativa);
+  // onDispose fecha a conexão do usuário anterior.
+  final scope = ref.watch(currentUserScopeProvider);
+  final db = AppDatabase.open(scope.dbFileName);
+  ref.onDispose(db.close);
+  return db;
+}
 
 @riverpod
 Stream<List<ClothingItem>> clothingItems(ClothingItemsRef ref) {

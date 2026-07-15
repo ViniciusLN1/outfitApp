@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Design system "Lookbook de Atelier".
 /// As fotos das peças são as protagonistas; a UI é a galeria: fundos quentes
-/// neutros (porcelain/greige), um único acento oxblood e tipografia didone
-/// (Marcellus) sobre uma base geométrica (Outfit). Elevation 0 em tudo;
+/// neutros (porcelain/greige), um único acento oxblood e tipografia geométrica
+/// única (Outfit), com hierarquia por peso e corpo. Elevation 0 em tudo;
 /// profundidade vem de tom sobre tom, não de sombra nem de borda.
 
 // Paleta light
@@ -23,9 +23,7 @@ const _bone = Color(0xFFF0EBE2);
 const _rosewood = Color(0xFFD08E9C);
 const _mossLight = Color(0xFFA9B399);
 
-// Marcellus é romana lapidar de peso único (400): hierarquia vem de corpo e
-// letterSpacing, nunca de fontWeight (o Flutter não sintetiza negrito).
-const kDisplayFont = 'Marcellus';
+const kDisplayFont = 'Outfit';
 const kBodyFont = 'Outfit';
 
 /// Estilo "eyebrow" (rótulo editorial de seção): use via
@@ -74,8 +72,8 @@ ThemeData buildAppTheme(Brightness brightness) {
 
   const display = TextStyle(
     fontFamily: kDisplayFont,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.6,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
     height: 1.15,
   );
   final textTheme = TextTheme(
@@ -85,7 +83,7 @@ ThemeData buildAppTheme(Brightness brightness) {
     headlineLarge: display.copyWith(fontSize: 29),
     headlineMedium: display.copyWith(fontSize: 26),
     headlineSmall: display.copyWith(fontSize: 23),
-    titleLarge: display.copyWith(fontSize: 20, letterSpacing: 0.8),
+    titleLarge: display.copyWith(fontSize: 20, letterSpacing: 0),
     titleMedium: const TextStyle(
         fontFamily: kBodyFont,
         fontSize: 15,
@@ -132,9 +130,9 @@ ThemeData buildAppTheme(Brightness brightness) {
       titleTextStyle: TextStyle(
         fontFamily: kDisplayFont,
         color: fg,
-        fontSize: 21,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 1.5,
+        fontSize: 19,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(

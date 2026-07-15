@@ -36,7 +36,11 @@ class UsageEntry {
   daos: [ClothingDao, OutfitDao, UsageDao, StatsDao],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : this.open('outfit_app.db');
+
+  /// Abre o banco em `documents/<fileName>` (um arquivo por usuário logado;
+  /// `outfit_app.db` é o do modo convidado).
+  AppDatabase.open(String fileName) : super(_openConnection(fileName));
 
   AppDatabase.forTesting(super.e);
 
@@ -148,10 +152,18 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-LazyDatabase _openConnection() {
+/// Executado no isolate do banco antes de abrir. O isolate spawnado não herda
+/// o `open.overrideFor` do main isolate; os testes no Linux injetam aqui o
+/// override da libsqlite3 do sistema.
+Future<void> Function()? databaseIsolateSetup;
+
+LazyDatabase _openConnection(String fileName) {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'outfit_app.db'));
-    return NativeDatabase.createInBackground(file);
+    final file = File(p.join(dbFolder.path, fileName));
+    return NativeDatabase.createInBackground(
+      file,
+      isolateSetup: databaseIsolateSetup,
+    );
   });
 }

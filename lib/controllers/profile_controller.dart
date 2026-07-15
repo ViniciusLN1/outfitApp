@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../services/user_scope.dart';
+import 'auth_controller.dart';
 import 'preferences.dart';
 
 part 'profile_controller.g.dart';
@@ -24,15 +26,21 @@ class ProfileState {
 
 @Riverpod(keepAlive: true)
 class ProfileController extends _$ProfileController {
-  static const _keyUsername = 'username';
-  static const _keyPhoto = 'photoPath';
+  String get _keyUsername =>
+      'username${ref.read(currentUserScopeProvider).prefsSuffix}';
+  String get _keyPhoto =>
+      'photoPath${ref.read(currentUserScopeProvider).prefsSuffix}';
 
   @override
   ProfileState build() {
     final prefs = ref.watch(sharedPreferencesProvider);
+    final scope = ref.watch(currentUserScopeProvider);
+    final session = ref.watch(authControllerProvider).valueOrNull;
     return ProfileState(
-      username: prefs.getString(_keyUsername) ?? 'Usuário',
-      photoPath: prefs.getString(_keyPhoto),
+      username: prefs.getString('username${scope.prefsSuffix}') ??
+          session?.username ??
+          'Usuário',
+      photoPath: prefs.getString('photoPath${scope.prefsSuffix}'),
     );
   }
 
@@ -50,7 +58,8 @@ class ProfileController extends _$ProfileController {
 
     final bytes = await picked.readAsBytes();
     final dir = await getApplicationDocumentsDirectory();
-    final profileDir = Directory('${dir.path}/profile');
+    final scope = ref.read(currentUserScopeProvider);
+    final profileDir = Directory('${dir.path}/${scope.profileDirName}');
     await profileDir.create(recursive: true);
     final file = File('${profileDir.path}/avatar.jpg');
     await file.writeAsBytes(bytes);

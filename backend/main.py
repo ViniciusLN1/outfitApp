@@ -5,11 +5,16 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from rembg import new_session, remove
 
+import auth
+import backup
+import storage
+
 _session = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    storage.init_db()
     # Carrega o modelo ONNX (U2NET) uma única vez; recarregar por request
     # custa segundos e centenas de MB de alocação repetida.
     global _session
@@ -18,7 +23,9 @@ async def lifespan(app: FastAPI):
     _session = None
 
 
-app = FastAPI(title="OutfitApp Background Removal API", lifespan=lifespan)
+app = FastAPI(title="OutfitApp API", lifespan=lifespan)
+app.include_router(auth.router)
+app.include_router(backup.router)
 
 
 @app.post("/remove-background")

@@ -9,7 +9,7 @@ import '../../controllers/clothing_controller.dart';
 import '../../controllers/constructor_controller.dart';
 import '../../models/item_color.dart';
 import '../../services/background_removal_service.dart';
-import '../../services/image_storage_service.dart';
+import '../../services/user_scope.dart';
 
 enum _UiState { sourceSelection, camera }
 
@@ -132,7 +132,7 @@ class _CaptureViewState extends ConsumerState<CaptureView> {
     }
     setState(() => _isProcessing = true);
     try {
-      final path = await ImageStorageService().savePng(png);
+      final path = await ref.read(imageStorageServiceProvider).savePng(png);
       await ref.read(clothingControllerProvider.notifier).addItem(
             name: name,
             imagePath: path,

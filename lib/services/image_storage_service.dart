@@ -8,12 +8,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class ImageStorageService {
-  // Evita uma chamada de platform channel + mkdir por salvamento.
-  static Future<Directory>? _clothingDir;
+  /// Diretório (dentro de documents) onde as peças ficam; segmentado por
+  /// usuário logado, `clothing` para o convidado.
+  ImageStorageService([this._dirName = 'clothing']);
 
-  static Future<Directory> _ensureDir() => _clothingDir ??= () async {
+  final String _dirName;
+
+  // Evita uma chamada de platform channel + mkdir por salvamento.
+  Future<Directory>? _clothingDir;
+
+  Future<Directory> _ensureDir() => _clothingDir ??= () async {
         final dir = await getApplicationDocumentsDirectory();
-        return Directory(p.join(dir.path, 'clothing')).create(recursive: true);
+        return Directory(p.join(dir.path, _dirName)).create(recursive: true);
       }();
 
   Future<String> savePng(Uint8List bytes, {String? filename}) async {
@@ -33,7 +39,7 @@ class ImageStorageService {
   static Future<void> trimExistingImages(SharedPreferences prefs) async {
     if (prefs.getBool(_trimFlagKey) ?? false) return;
     try {
-      final dir = await _ensureDir();
+      final dir = await ImageStorageService()._ensureDir();
       await for (final entry in dir.list()) {
         if (entry is! File || !entry.path.endsWith('.png')) continue;
         try {

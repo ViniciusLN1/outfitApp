@@ -6,7 +6,7 @@ part of 'clothing_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appDatabaseHash() => r'92a246abcb363d93aa5a028712241f464abc4efe';
+String _$appDatabaseHash() => r'56a69ed11ce9dceb1acbcca263235433522a507c';
 
 /// See also [appDatabase].
 @ProviderFor(appDatabase)
